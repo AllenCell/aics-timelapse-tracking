@@ -1,12 +1,12 @@
 """General utility functions."""
 
 
-from typing import List, Sequence
+from typing import Callable, List, Sequence
 import os
 import time
 
 
-def report_run_time(fn):
+def report_run_time(fn: Callable):
     """Decorator to report function execution time."""
     def wrapper(*args, **kwargs):
         tic = time.time()

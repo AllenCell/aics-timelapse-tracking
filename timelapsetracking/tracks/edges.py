@@ -1,6 +1,9 @@
-from timelapsetracking.tracks.correspondances import find_correspondances
+"""Functions to find connections between nodes in time-lapse graph."""
+
+
 import pandas as pd
-import pdb
+
+from timelapsetracking.tracks.correspondances import find_correspondances
 
 
 def add_edges(
@@ -8,7 +11,6 @@ def add_edges(
         col_index_sequence: str = 'index_sequence',
 ):
     """Add edges to track graph based on centroids."""
-    print(df.columns)
     assert col_index_sequence in df.columns
     df_prev = None
     cols_zyx = ['centroid_z', 'centroid_y', 'centroid_x']
@@ -16,8 +18,8 @@ def add_edges(
         pd.DataFrame(index=df.index, columns=['in_list', 'out_list'])
         .fillna('')
     )
-    for group, df_curr in df.groupby('index_sequence'):
-        print(group, df_curr.shape)
+    for idx_s, df_curr in df.groupby(col_index_sequence):
+        print(f'Processing {col_index_sequence}:', idx_s)
         if df_prev is None:
             df_prev = df_curr
             continue
