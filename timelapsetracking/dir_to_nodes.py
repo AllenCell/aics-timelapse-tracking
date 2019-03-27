@@ -1,16 +1,22 @@
-from timelapsetracking.util import report_run_time
+"""Functions to convert objects in segmentation images to node representation.
+
+"""
+
 from typing import List, Optional
-import numpy as np
 import os
+
+import numpy as np
 import pandas as pd
-import pdb
 import tifffile
+
+from timelapsetracking.util import images_from_dir
+from timelapsetracking.util import report_run_time
 
 
 def img_to_nodes(img: np.ndarray, meta: Optional[dict] = None) -> List[dict]:
     """Converts image of object labels to graph nodes.
 
-    centroid_x, centroid_y, centroid_z, volume, metadata
+    centroid_x, centroid_y, centroid_z, volume, label, metadata
 
     Parameters
     ----------
@@ -20,7 +26,7 @@ def img_to_nodes(img: np.ndarray, meta: Optional[dict] = None) -> List[dict]:
     Returns
     -------
     List[dict]
-        List of dictionies representing each object.
+        List of dictionaries representing each object.
 
     """
     assert img.ndim == 3
@@ -31,12 +37,12 @@ def img_to_nodes(img: np.ndarray, meta: Optional[dict] = None) -> List[dict]:
     if labels[0] == 0:
         labels = labels[1:]
     nodes = []
-    # TODO: add "label" to node information
     for label in labels:
         node = {}
         mask = img == label
         coords = np.where(mask)
         node['volume'] = mask.sum()
+        node['label_img'] = label
         for idx_d, dim in enumerate('zyx'):
             node[f'centroid_{dim}'] = coords[idx_d].mean()
         node.update(meta)
@@ -45,25 +51,22 @@ def img_to_nodes(img: np.ndarray, meta: Optional[dict] = None) -> List[dict]:
 
 
 @report_run_time
-def dir_to_nodes(path_dir: str) -> None:
+def dir_to_nodes(path_dir: str, path_save_csv: str) -> None:
     """Converts directory of label images to graph nodes.
 
     Parameters
     ----------
     path_dir
         Directory of images.
+    path_save_csv
+        Save path.
 
     Returns
     -------
     None
 
     """
-    paths_img = sorted(
-        [
-            p.path for p in os.scandir(path_dir)
-            if any(ext in p.path.lower() for ext in ['.tif', '.tiff'])
-        ]
-    )
+    paths_img = images_from_dir(path_dir)
     nodes = []
     for idx_s, path_img in enumerate(paths_img):
         print(f'Processing ({idx_s + 1}/{len(paths_img)}):', path_img)
@@ -72,6 +75,11 @@ def dir_to_nodes(path_dir: str) -> None:
             'index_sequence': idx_s,
         }
         nodes.extend(img_to_nodes(tifffile.imread(path_img), meta=meta))
-    path_csv = os.path.join('tmp_outputs', 'nodes.csv')
-    pd.DataFrame(nodes).rename_axis('node_id', axis=0).to_csv(path_csv)
-    print('Saved:', path_csv)
+        if idx_s >= 1:
+            break
+    dirname = os.path.dirname(path_save_csv)
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
+        print('Created:', dirname)
+    pd.DataFrame(nodes).rename_axis('node_id', axis=0).to_csv(path_save_csv)
+    print('Saved:', path_save_csv)
