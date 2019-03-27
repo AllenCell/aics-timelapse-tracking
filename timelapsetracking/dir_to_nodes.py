@@ -2,7 +2,8 @@
 
 """
 
-from typing import List, Optional
+from multiprocessing import Pool
+from typing import Dict, List, Optional
 import os
 
 import numpy as np
@@ -13,19 +14,24 @@ from timelapsetracking.util import images_from_dir
 from timelapsetracking.util import report_run_time
 
 
-def img_to_nodes(img: np.ndarray, meta: Optional[dict] = None) -> List[dict]:
+def img_to_nodes(
+        img: np.ndarray, meta: Optional[Dict] = None
+) -> List[Dict]:
     """Converts image of object labels to graph nodes.
 
+    For each object, creates a node with attributes:
     centroid_x, centroid_y, centroid_z, volume, label, metadata
 
     Parameters
     ----------
     img
         Image of labeled objects.
+    meta
+        Optional attributes to be applied to all objects found in input image.
 
     Returns
     -------
-    List[dict]
+    List[Dict]
         List of dictionaries representing each object.
 
     """
@@ -50,33 +56,43 @@ def img_to_nodes(img: np.ndarray, meta: Optional[dict] = None) -> List[dict]:
     return nodes
 
 
+def _img_to_nodes_wrapper(meta: Dict) -> List[Dict]:
+    """Wrapper for 'map' method of multiprocessing.Pool."""
+    print('Processing:', meta['path_tif'])
+    return img_to_nodes(tifffile.imread(meta['path_tif']), meta=meta)
+
+
 @report_run_time
-def dir_to_nodes(path_dir: str, path_save_csv: str) -> None:
+def dir_to_nodes(
+        path_img_dir: str,
+        path_save_csv: str,
+        num_processes: int = 8,
+) -> None:
     """Converts directory of label images to graph nodes.
 
     Parameters
     ----------
-    path_dir
+    path_img_dir
         Directory of images.
     path_save_csv
         Save path.
+    num_processes
+        Maximum number of processes used to perform conversion.
 
     Returns
     -------
     None
 
     """
-    paths_img = images_from_dir(path_dir)
+    paths_img = images_from_dir(path_img_dir)
+    metas = [
+        {'index_sequence': idx_s, 'path_tif': path} for idx_s, path in enumerate(paths_img)
+    ]
+    with Pool(min(num_processes, os.cpu_count())) as pool:
+        nodes_per_img = pool.map(_img_to_nodes_wrapper, metas)
     nodes = []
-    for idx_s, path_img in enumerate(paths_img):
-        print(f'Processing ({idx_s + 1}/{len(paths_img)}):', path_img)
-        meta = {
-            'path_tif': os.path.abspath(path_img),
-            'index_sequence': idx_s,
-        }
-        nodes.extend(img_to_nodes(tifffile.imread(path_img), meta=meta))
-        if idx_s >= 1:
-            break
+    for per_img in nodes_per_img:
+        nodes.extend(per_img)
     dirname = os.path.dirname(path_save_csv)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
