@@ -1,17 +1,21 @@
+"""Visualization utility functions."""
+
+
+from typing import Dict, List, Optional, Sequence, Tuple, Union
+import os
+
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Circle
 from scipy.ndimage.morphology import binary_erosion
-from typing import Dict, List, Optional, Sequence, Tuple, Union
-import matplotlib.pyplot as plt
 import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
-import os
 import pandas as pd
-import pdb
 import tifffile
 
+from timelapsetracking.util import images_from_dir
 
-# plt.switch_backend('TkAgg')
+
 Pos = Tuple[float, float]
 Color = Union[str, Sequence[float]]
 
@@ -44,6 +48,7 @@ def get_color_mapping(
 
 
 def save_tif(path_save: str, img: np.ndarray):
+    """Utility function to consistently save uint8 tifs."""
     if img.dtype == bool:
         img = img.astype(np.uint8)*255
     assert np.issubdtype(img.dtype, np.uint8)
@@ -94,7 +99,7 @@ def visualize_objects(
         colors_segments = ['red' if c is None else c for c in colors_segments]
     patches = []
     fig, ax = plt.subplots(facecolor='black')
-    if points is not None and len(points) > 0:
+    if points:
         points_y, points_x = [coord for coord in zip(*points)]
         ax.scatter(points_x, points_y, c=colors_points, s=64.0)
     for center in circles:
@@ -160,16 +165,11 @@ def timelapse_3d_to_2d(
     None
 
     """
-    print('Convert')
-    paths_tifs = sorted([
-        p.path for p in os.scandir(path_in_dir)
-        if p.path.lower().endswith('.tif')
-    ])
-    assert len(paths_tifs) > 0
+    paths_tifs = images_from_dir(path_in_dir)
+    assert paths_tifs
     if not os.path.exists(path_out_dir):
         os.makedirs(path_out_dir)
-    # z_index = _pick_z_index(paths_tifs)
-    z_index = 22
+    z_index = _pick_z_index(paths_tifs)
     print('z_index:', z_index)
     dirname = os.path.basename(os.path.normpath(path_in_dir))
     for idx_t, path_tif in enumerate(paths_tifs):
@@ -261,7 +261,7 @@ def visualize_tracks_2d(
         print('index_sequence:', group)
         segments = []
         colors_segments = []
-        for idx_r, row in df_g.iterrows():
+        for _, row in df_g.iterrows():
             if not np.isnan(row.in_list):
                 segments.append((
                     df.loc[int(row.in_list), 'centroid'],
