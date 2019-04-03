@@ -1,7 +1,7 @@
 """
 A simple example of a test file using a function.
 NOTE: All test file names must have one of the two forms.
-- `test_<XYY>.py` 
+- `test_<XYY>.py`
 - '<XYZ>_test.py'
 
 Docs: https://docs.pytest.org/en/latest/
