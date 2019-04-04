@@ -11,7 +11,8 @@ def find_longest_tracks(df: pd.DataFrame) -> List[int]:
         DataFrame representing time-lapse graph with 'track_id' column.
 
     """
-    assert 'track_id' in df.columns, '"track_id" should be in input DataFrame'
+    if 'track_id' not in df.columns:
+        raise ValueError('"track_id" column expected in df')
     # For each track_id, count number of unique frames to get track length
     track_lengths = (
         df

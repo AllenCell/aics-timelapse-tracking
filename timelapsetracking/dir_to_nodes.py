@@ -35,8 +35,10 @@ def img_to_nodes(
         List of dictionaries representing each object.
 
     """
-    assert img.ndim == 3
-    assert np.issubdtype(img.dtype, np.unsignedinteger)
+    if img.ndim != 3:
+        raise ValueError('Images must be 3d')
+    if not np.issubdtype(img.dtype, np.unsignedinteger):
+        raise TypeError('Image must be np.unsignedinteger compatible')
     if meta is None:
         meta = {}
     labels = np.unique(img)

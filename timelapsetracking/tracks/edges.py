@@ -11,7 +11,8 @@ def add_edges(
         col_index_sequence: str = 'index_sequence',
 ):
     """Add edges to track graph based on centroids."""
-    assert col_index_sequence in df.columns
+    if col_index_sequence not in df.columns:
+        raise ValueError(f'"{col_index_sequence}" column expected in df')
     df_prev = None
     cols_zyx = ['centroid_z', 'centroid_y', 'centroid_x']
     df_edges = (

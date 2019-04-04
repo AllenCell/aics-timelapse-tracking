@@ -21,14 +21,14 @@ Color = Union[str, Sequence[float]]
 
 
 def get_color_mapping(
-        identifiers: List[int], cmap_mpl: str = 'hsv'
+        identifiers: Sequence[int], cmap_mpl: str = 'hsv'
 ) -> Dict[int, Color]:
-    """Creates mapping from identifiers to colors.
+    """Creates mapping from unique identifiers to colors.
 
     Parameters
     ----------
     identifiers
-        Unique, hashable identifiers.
+        Sequence of identifiers.
     cmap_mpl
         Matplotlib ColorMap from which to choose colors.
 
@@ -39,7 +39,7 @@ def get_color_mapping(
 
     """
     cm = matplotlib.cm.get_cmap(cmap_mpl)
-    identifiers = set(identifiers)
+    identifiers = set(identifiers)  # to ensure uniqueness
     id_to_color = {}
     floaties = np.linspace(0., 1., len(identifiers))
     for idx, item in enumerate(identifiers):
@@ -47,19 +47,32 @@ def get_color_mapping(
     return id_to_color
 
 
-def save_tif(path_save: str, img: np.ndarray):
-    """Utility function to consistently save uint8 tifs."""
+def save_tif(path_save: str, img: np.ndarray) -> None:
+    """Utility function to consistently save uint8 tifs.
+
+    Parameters
+    ----------
+    path_save
+        Path to save image.
+    img
+        Numpy array with dtype uint8 or bool.
+
+    """
+    if img.dtype not in [bool, np.uint8]:
+        raise TypeError('Images must be type uint8 or bool')
     if img.dtype == bool:
         img = img.astype(np.uint8)*255
-    assert np.issubdtype(img.dtype, np.uint8)
     tifffile.imsave(path_save, img, compress=2)
     print('Saved:', path_save)
 
 
 def _overlay(img_b: np.ndarray, img_o: np.ndarray) -> np.ndarray:
     """Overlays image on another with zero meaning transparent."""
-    assert np.issubdtype(img_b.dtype, np.unsignedinteger)
-    assert np.issubdtype(img_o.dtype, np.unsignedinteger)
+    if (
+            not np.issubdtype(img_b.dtype, np.unsignedinteger)
+            or not np.issubdtype(img_o.dtype, np.unsignedinteger)
+    ):
+        raise TypeError('Images must be np.unsignedinteger compatible')
     mask = img_o > 0
     if mask.ndim > 2:
         mask = np.any(mask, axis=2)
@@ -70,9 +83,13 @@ def _overlay(img_b: np.ndarray, img_o: np.ndarray) -> np.ndarray:
 
 def _blend_lighten_only(img_a: np.ndarray, img_b: np.ndarray) -> np.ndarray:
     """Blends two images with 'lighten only' blend mode."""
-    assert np.issubdtype(img_a.dtype, np.unsignedinteger)
-    assert np.issubdtype(img_b.dtype, np.unsignedinteger)
-    assert img_a.shape == img_b.shape
+    if (
+            not np.issubdtype(img_a.dtype, np.unsignedinteger)
+            or not np.issubdtype(img_b.dtype, np.unsignedinteger)
+    ):
+        raise TypeError('Images must be np.unsignedinteger compatible')
+    if img_a.shape != img_b.shape:
+        raise ValueError("Images must be the same shape")
     return np.maximum(img_a, img_b)
 
 
@@ -92,10 +109,12 @@ def visualize_objects(
     if segments is None:
         segments = []
     if isinstance(colors_points, list):
-        assert len(colors_points) == len(points)
+        if len(colors_points) != len(points):
+            raise ValueError('Length of color_points and points must match')
         colors_points = ['lime' if c is None else c for c in colors_points]
     if isinstance(colors_segments, list):
-        assert len(colors_segments) == len(segments)
+        if len(colors_segments) != len(segments):
+            raise ValueError('Length of color_segments and segments must match')
         colors_segments = ['red' if c is None else c for c in colors_segments]
     patches = []
     fig, ax = plt.subplots(facecolor='black')
@@ -128,12 +147,28 @@ def visualize_objects(
     ax.set_axis_off()
     fig.subplots_adjust(bottom=0, top=1, left=0, right=1)
     fig.canvas.draw()
-    ar = np.array(fig.canvas.renderer._renderer)[:, :, :3]
+    ar = np.array(fig.canvas.renderer._renderer)[:, :, :3]  # ignore alpha chan
     plt.close(fig)
     return ar
 
 
-def _pick_z_index(paths_tifs: List[str], n_check: int = 4):
+def _pick_z_index(paths_tifs: List[str], n_check: int = 4) -> int:
+    """Selects a z index for transforming a 3d image sequence to a 2d image
+    sequence.
+
+    Parameters
+    ----------
+    paths_tifs
+        Path to directory of tif images.
+    n_check
+        Maximum number of images to look at to determine returned z index.
+
+    Returns
+    -------
+    int
+        Selected z index.
+
+    """
     print('Picking z index....')
     n_check = min(n_check, len(paths_tifs))
     interval = len(paths_tifs)//n_check
@@ -141,7 +176,8 @@ def _pick_z_index(paths_tifs: List[str], n_check: int = 4):
     for idx_t in range(0, len(paths_tifs), interval)[:n_check]:
         print(idx_t)
         img = tifffile.imread(paths_tifs[idx_t])
-        assert img.ndim == 3
+        if img.ndim != 3:
+            raise ValueError('Images must be 3d')
         zs.append((img > 0).sum(axis=(1, 2)).argmax())
     return int(np.mean(zs).round())
 
@@ -166,15 +202,17 @@ def timelapse_3d_to_2d(
 
     """
     paths_tifs = images_from_dir(path_in_dir)
-    assert paths_tifs
+    if not paths_tifs:
+        raise ValueError('TIF directory is empty.')
     if not os.path.exists(path_out_dir):
         os.makedirs(path_out_dir)
     z_index = _pick_z_index(paths_tifs)
-    print('z_index:', z_index)
+    print('Converting to 2d image sequence using z index', z_index)
     dirname = os.path.basename(os.path.normpath(path_in_dir))
     for idx_t, path_tif in enumerate(paths_tifs):
         img = tifffile.imread(path_tif)
-        assert img.ndim == 3
+        if img.ndim != 3:
+            raise ValueError('Images must be 3d')
         img = (img[z_index, ] > 0).astype(np.uint8)*val_object
         img_line = np.logical_xor(img, binary_erosion(img, iterations=4))
         img[img_line] = 255
@@ -182,7 +220,6 @@ def timelapse_3d_to_2d(
             path_out_dir, f'{dirname}.{idx_t:03d}.z{z_index}.tif'
         )
         save_tif(path_save, img)
-    print('Done!!!')
 
 
 class TrackVisualizer:
@@ -228,7 +265,7 @@ def visualize_tracks_2d(
         df: pd.DataFrame,
         shape: Tuple[int, int],
         path_save_dir: str,
-        color_map: Optional[dict] = None,
+        color_map: Optional[Dict] = None,
 ) -> None:
     """
 
@@ -244,7 +281,8 @@ def visualize_tracks_2d(
         Mapping from track_id to color.
 
     """
-    assert all(col in df.columns for col in ['centroid_y', 'centroid_x'])
+    if not all(col in df.columns for col in ['centroid_y', 'centroid_x']):
+        raise ValueError('"centroid_y", "centroid_x" columns expected in df')
     if color_map is None:
         color_map = {}
     if not os.path.exists(path_save_dir):

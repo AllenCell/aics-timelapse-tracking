@@ -1,8 +1,8 @@
+from typing import List, Sequence, Tuple, Union, Optional
+
 from scipy.optimize import linprog
 from scipy.spatial import KDTree
-from typing import Union, Optional
 import numpy as np
-import pdb
 
 
 def _calc_dist(
@@ -21,11 +21,42 @@ def _calc_pos_edges(
         thresh_split: Optional[float] = None,
         cost_add: Optional[float] = None,
         cost_delete: Optional[float] = None,
-):
-    """Find potential linkages between sets of centroids."""
-    assert centroids_a.ndim == centroids_b.ndim
-    assert centroids_a.shape[-1] == centroids_b.shape[-1]
+) -> Tuple[Sequence[List], Sequence[float], Sequence[List], Sequence[List]]:
+    """Find potential linkages between sets of centroids.
 
+    Potential linkages are given a cost based on the Euclidean distance between
+    the objects. In the case of object appearance or disappearance, cost is
+    determined by cost_add or cost_delete respectively.
+
+    Parameters
+    ----------
+    centroids_a
+        Centroids of first set of objects.
+    centroids_b
+        Centroids of second set of objects.
+    thresh_dist
+        Maximum distance between potentially linked objects.
+    allow_splits
+        Set to allow object splits.
+    thresh_split
+        Maximum distance between child objects after a split.
+    cost_add
+        Cost of object creation.
+    cost_delete
+        Cost of object deletion.
+
+    Returns
+    -------
+    Tuple[Sequence[List], Sequence[float], Sequence[List], Sequence[List]]
+        pos_edges, costs, indices_left, indices_right
+
+    """
+    if centroids_a.ndim != 2 or centroids_b.ndim != 2:
+        raise ValueError('Input centroids list must have dim 2')
+    if centroids_a.shape[-1] != centroids_b.shape[-1]:
+        raise ValueError(
+            'Centroids in each input list must have the same dimensionality'
+        )
     if thresh_split is None:
         thresh_split = thresh_dist/2
     if cost_add is None:
@@ -62,10 +93,9 @@ def _calc_pos_edges(
             costs.append(cost)
         # Add edges for potential splits
         if allow_splits and len(indices_b) > 1:
-            raise NotImplementedError  # TODO
+            raise NotImplementedError('Splits not yet supported')
             tree_neighbors = KDTree(tree_b.data[indices_b, ])
             pairs = tree_neighbors.query_pairs(thresh_split)
-            pdb.set_trace()
             for pair in pairs:
                 idx_e = len(pos_edges)
                 cost = _calc_dist(
@@ -83,7 +113,6 @@ def _calc_pos_edges(
         indices_right[idx_b].append(idx_e)
         pos_edges.append((None, idx_b))
         costs.append(cost_add)
-    assert len(pos_edges) == len(costs)
     return pos_edges, costs, indices_left, indices_right
 
 
@@ -103,7 +132,6 @@ def find_correspondances(
         constraint[indices] = 1
         A_eq.append(constraint)
     b_eq = [1]*len(A_eq)
-    # for method in ['interior-point', 'simplex']:
     for method in ['simplex', 'interior-point']:
         result = linprog(
             c=costs,
