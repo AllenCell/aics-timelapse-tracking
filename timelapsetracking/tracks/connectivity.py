@@ -21,6 +21,23 @@ class _Explorer:
 def _calc_weakly_connected_components(
         in_list: Dict[int, List[int]], out_list: Dict[int, List[int]]
 ) -> Dict[int, int]:
+    """Maps nodes to unique weakly-connected component (WCC) ids. In the
+    context of cell tracks, each wcc identifies tracks that originate from the
+    same ancestor node.
+
+    Parameters
+    ----------
+    in_list
+        'in' edges for each node
+    out_list
+        'out' edges for each node
+
+    Returns
+    -------
+    Dict[int, int]
+        Mapping from nodes to WCC ids.
+
+    """
     if in_list.keys() != out_list.keys():
         raise ValueError('Input lists must have same keys')
     adj_list = {k: (in_list[k] + out_list[k]) for k in in_list.keys()}
@@ -31,7 +48,7 @@ def _calc_weakly_connected_components(
             continue
         explorer.explore_assign_wcc(node, wcc)
         wcc += 1
-    return dict(explorer.wcc_list)
+    return explorer.wcc_list
 
 
 def add_track_ids(df: pd.DataFrame) -> pd.DataFrame:

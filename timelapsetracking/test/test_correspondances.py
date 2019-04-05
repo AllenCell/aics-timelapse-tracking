@@ -171,11 +171,3 @@ def test_mitosis():
         (0, None), (1, (0, 2)), (2, 1), (3, 4), (None, 3), (None, 5)
     )
     assert _matchings_equal(matches, matches_exp)
-
-
-if __name__ == '__main__':
-    test_simple()
-    test_delete()
-    test_add()
-    test_blanks()
-    # test_mitosis()
