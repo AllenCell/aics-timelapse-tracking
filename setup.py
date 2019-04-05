@@ -50,16 +50,16 @@ setup(name=PACKAGE_NAME,
       author_email='jianxuc@alleninstitute.org',
       license='Allen Institute Software License',
       packages=find_packages(exclude=['tests', '*.tests', '*.tests.*']),
+      python_requires='>=3.6',
       entry_points={
           "console_scripts": [
               "my_example={}.bin.my_example:main".format(PACKAGE_NAME)
           ]
       },
       install_requires=[
-          # List of modules required to use/run this module.
-          # -- E.g.
-          # 'numpy>=1.15.1',
-          # 'requests'
+          'numpy',
+          'pandas',
+          'scipy',
       ],
 
       # For test setup. This will allow JUnit XML output for Jenkins
