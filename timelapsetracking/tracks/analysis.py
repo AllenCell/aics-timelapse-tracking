@@ -1,4 +1,5 @@
 from typing import List
+
 import pandas as pd
 
 
@@ -24,3 +25,35 @@ def find_longest_tracks(df: pd.DataFrame) -> List[int]:
         track_lengths.loc[track_lengths == track_lengths.max()].index
     )
     return track_ids
+
+
+def add_delta_pos(df: pd.DataFrame) -> pd.DataFrame:
+    """Add relative xyz displacement columns for nodes with parents.
+
+    Parameters
+    ----------
+    df
+        Track graph as a DataFrame.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with added x, y, or z displacements.
+
+    """
+    if 'in_list' not in df.columns:
+        raise ValueError('DataFrame should have "in_list" column')
+    cols_pos = ('centroid_x', 'centroid_y', 'centroid_z')
+    if not any(col in df.columns for col in cols_pos):
+        raise ValueError(
+            f'DataFrame should have at least 1 position column {cols_pos}'
+        )
+    mask = df['in_list'].notna()
+    parents = df['in_list'].dropna().astype(int).to_numpy()
+    for col in cols_pos:
+        if col not in df.columns:
+            continue
+        children_pos = df.loc[mask, col]
+        parents_pos = df.loc[parents, col].values
+        df.loc[mask, 'delta_' + col] = children_pos - parents_pos
+    return df
