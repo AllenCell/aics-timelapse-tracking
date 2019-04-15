@@ -49,7 +49,7 @@ def add_delta_pos(df: pd.DataFrame) -> pd.DataFrame:
             f'DataFrame should have at least 1 position column {cols_pos}'
         )
     mask = df['in_list'].notna()
-    parents = df['in_list'].dropna().astype(int).values
+    parents = df['in_list'].dropna().astype(int).to_numpy()
     for col in cols_pos:
         if col not in df.columns:
             continue
