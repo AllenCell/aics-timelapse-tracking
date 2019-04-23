@@ -47,7 +47,7 @@ def _gen_dummy_image_dir(
 
 
 def test_img_to_nodes():
-    """Tests bad inputs into img_to_nodes function."""
+    """Tests img_to_nodes function with dummy 2d and 3d images."""
     # Test bad inputs
     with pytest.raises(ValueError):
         img_to_nodes(np.zeros((10,), dtype=np.uint8))
