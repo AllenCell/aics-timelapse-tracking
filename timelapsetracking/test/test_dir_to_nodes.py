@@ -46,8 +46,33 @@ def _gen_dummy_image_dir(
         tifffile.imsave(path_tif, img)
 
 
-def test_img_to_nodes():
-    """Tests img_to_nodes function with dummy 2d and 3d images."""
+@pytest.mark.parametrize(
+    "centroids, shape",
+    [
+        ([(3, 4), (16, 19), (80, 80)], (128, 256)),  # 2d centroids
+        ([(2, 4, 8), (64, 128, 256)], (128, 256, 512)),  # 3d centroids
+    ],
+)
+def test_img_to_nodes_v2(
+        centroids: Sequence[Sequence[int]], shape: Sequence[int]
+):
+    """Tests img_to_nodes function with dummy 2d or 3d images."""
+    # Form expected output
+    centroids_np = np.array(centroids, dtype=np.float)
+    ndim = centroids_np.shape[1]
+    columns = [f'centroid_{dim}' for dim in 'zyx'[-ndim:]]
+    df_exp = pd.DataFrame(centroids_np, columns=columns)
+    df_exp['label_img'] = range(1, len(centroids) + 1)
+    df_exp['volume'] = [(label*2 + 1)**ndim for label in df_exp['label_img']]
+
+    img = _gen_dummy_image(centroids=centroids, shape=shape)
+    df = pd.DataFrame(img_to_nodes(img))
+    assert len(df) == len(centroids)
+    assert df_exp.equals(df.filter(df_exp.columns))
+
+
+def test_img_to_nodes_edge_corner():
+    """Tests img_to_nodes function with edge and corner cases."""
     # Test bad inputs
     with pytest.raises(ValueError):
         img_to_nodes(np.zeros((10,), dtype=np.uint8))
@@ -58,42 +83,6 @@ def test_img_to_nodes():
     img = _gen_dummy_image(centroids=[], shape=(32, 32))
     result = img_to_nodes(img)
     assert not result
-
-    # Test 2d image
-    centroids = [(3, 4), (16, 19), (80, 80)]
-    img = _gen_dummy_image(centroids=centroids, shape=(128, 256))
-    df = pd.DataFrame(img_to_nodes(img))
-    assert len(df) == 3
-    centroid_y_exp = [3., 16., 80.]
-    centroid_x_exp = [4., 19., 80.]
-    label_img_exp = [1, 2, 3]
-    volume_exp = [(label*2 + 1)**2 for label in label_img_exp]
-    df_exp = pd.DataFrame({
-        'centroid_y': centroid_y_exp,
-        'centroid_x': centroid_x_exp,
-        'label_img': label_img_exp,
-        'volume': volume_exp,
-    })
-    assert df_exp.equals(df.filter(df_exp.columns))
-
-    # Test 3d image
-    centroids = [(2, 4, 8), (64, 128, 256)]
-    img = _gen_dummy_image(centroids=centroids, shape=(128, 256, 512))
-    df = pd.DataFrame(img_to_nodes(img))
-    assert len(df) == 2
-    centroid_z_exp = [2., 64.]
-    centroid_y_exp = [4., 128.]
-    centroid_x_exp = [8., 256.]
-    label_img_exp = [1, 2]
-    volume_exp = [(label*2 + 1)**3 for label in label_img_exp]
-    df_exp = pd.DataFrame({
-        'centroid_z': centroid_z_exp,
-        'centroid_y': centroid_y_exp,
-        'centroid_x': centroid_x_exp,
-        'label_img': label_img_exp,
-        'volume': volume_exp,
-    })
-    assert df_exp.equals(df.filter(df_exp.columns))
 
 
 def test_dir_to_nodes(tmp_path):
