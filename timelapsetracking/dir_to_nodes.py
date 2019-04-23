@@ -56,7 +56,8 @@ def img_to_nodes(
         coords = np.where(mask)
         node['volume'] = mask.sum()
         node['label_img'] = label
-        for idx_d, dim in enumerate('zyx'[-img.ndim:]):  # handles 2d vs 3d
+        # Iterate over 'yx' for 2d, 'zyx' for 3d
+        for idx_d, dim in enumerate('zyx'[-img.ndim:]):
             node[f'centroid_{dim}'] = coords[idx_d].mean()
         node.update(meta)
         nodes.append(node)
