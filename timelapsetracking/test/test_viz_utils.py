@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import matplotlib.pyplot as plt
 import pandas as pd
 import pytest
@@ -10,8 +8,7 @@ from timelapsetracking import viz_utils
 plt.switch_backend('Agg')
 
 
-def test_vizualize_tracks_2d():
-    tmp_path = Path('tmp_for_test_delete_me')
+def test_vizualize_tracks_2d(tmp_path):
     df_graph = pd.DataFrame(
         {
             'centroid_y': [6, 10, 14, 30, 25, 20],
