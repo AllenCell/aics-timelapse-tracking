@@ -57,6 +57,7 @@ setup(name=PACKAGE_NAME,
           ]
       },
       install_requires=[
+          'matplotlib',
           'numpy',
           'pandas',
           'scipy',
