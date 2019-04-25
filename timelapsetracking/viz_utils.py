@@ -4,7 +4,6 @@
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 import logging
-import os
 
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Circle
@@ -220,7 +219,7 @@ def _pick_z_index(paths_tifs: List[str], n_check: int = 4) -> int:
 
 
 def timelapse_3d_to_2d(
-        path_in_dir: str, path_out_dir: str, val_object: int = 64
+        path_in_dir: Path, path_out_dir: Path, val_object: int = 64
 ) -> None:
     """Converts 3d time-lapse tifs into 2d time-lapse tifs.
 
@@ -231,7 +230,7 @@ def timelapse_3d_to_2d(
     path_out_dir
         Directory to save output 2d tifs.
     val_object
-        Value use to color each object.
+        Value used to color each object.
 
     Returns
     -------
@@ -241,11 +240,9 @@ def timelapse_3d_to_2d(
     paths_tifs = images_from_dir(path_in_dir)
     if not paths_tifs:
         raise ValueError('TIF directory is empty.')
-    if not os.path.exists(path_out_dir):
-        os.makedirs(path_out_dir)
+    path_out_dir.mkdir(parents=True, exist_ok=True)
     z_index = _pick_z_index(paths_tifs)
     logger.info('Converting to 2d image sequence using z index %d', z_index)
-    dirname = os.path.basename(os.path.normpath(path_in_dir))
     for idx_t, path_tif in enumerate(paths_tifs):
         img = tifffile.imread(path_tif)
         if img.ndim != 3:
@@ -253,8 +250,8 @@ def timelapse_3d_to_2d(
         img = (img[z_index, ] > 0).astype(np.uint8)*val_object
         img_line = np.logical_xor(img, binary_erosion(img, iterations=4))
         img[img_line] = 255
-        path_save = os.path.join(
-            path_out_dir, f'{dirname}.{idx_t:03d}.z{z_index}.tif'
+        path_save = Path(
+            path_out_dir, f'{path_in_dir.name}.{idx_t:03d}.z{z_index}.tif'
         )
         save_tif(path_save, img)
 
@@ -329,7 +326,9 @@ def visualize_tracks_2d(
         Index of first frame to render.
 
     """
-    for col in ['centroid_y', 'centroid_x', 'index_sequence', 'track_id']:
+    for col in [
+            'centroid_y', 'centroid_x', 'index_sequence', 'track_id', 'in_list'
+    ]:
         if col not in df.columns:
             raise ValueError(f'{col} column expected in df')
     color_map = color_map or {}
@@ -343,6 +342,7 @@ def visualize_tracks_2d(
     colors = df['track_id'].apply(lambda x: color_map.get(x))
     df = df.assign(centroid=centroids, color=colors)
     track_visualizer = TrackVisualizer(shape=shape)
+    idx_last = str('inf')
     for idx, df_g in df.groupby('index_sequence'):
         if idx not in indices_todo:
             continue
@@ -355,7 +355,7 @@ def visualize_tracks_2d(
                     row.centroid,
                 ))
                 colors_segments.append(color_map.get(row['track_id']))
-        path_tif = os.path.join(path_save_dir, f'{idx:03d}_tracks.tif')
+        path_tif = Path(path_save_dir, f'{idx:03d}_tracks.tif')
         img = track_visualizer.render(
             centroids=df_g['centroid'].tolist(),
             segments=segments,
@@ -365,10 +365,14 @@ def visualize_tracks_2d(
         )
         save_tif(path_tif, img)
         indices_todo.remove(idx)
+        idx_last = idx
     logger.info(f'Creating blanks for frames: {list(indices_todo)}')
     # Create blank images for frames with no tracks
     while indices_todo:
         idx = indices_todo.pop()
         path_tif = Path(path_save_dir, f'{idx:03d}_tracks.tif')
-        img = np.zeros(shape + (3,), dtype=np.uint8)
+        if idx > idx_last:
+            img = track_visualizer.render(centroids=[], segments=[])
+        else:
+            img = np.zeros(shape + (3,), dtype=np.uint8)
         save_tif(path_tif, img)
