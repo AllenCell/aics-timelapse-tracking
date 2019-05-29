@@ -1,8 +1,9 @@
 """Visualization utility functions."""
 
 
+from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple, Union
-import os
+import logging
 
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Circle
@@ -18,6 +19,7 @@ from timelapsetracking.util import images_from_dir
 
 Pos = Tuple[float, float]
 Color = Union[str, Sequence[float]]
+logger = logging.getLogger(__name__)
 
 
 def get_color_mapping(
@@ -63,7 +65,7 @@ def save_tif(path_save: str, img: np.ndarray) -> None:
     if img.dtype == bool:
         img = img.astype(np.uint8)*255
     tifffile.imsave(path_save, img, compress=2)
-    print('Saved:', path_save)
+    logger.info('Saved: %s', path_save)
 
 
 def _overlay(img_b: np.ndarray, img_o: np.ndarray) -> np.ndarray:
@@ -97,17 +99,43 @@ def visualize_objects(
         points: Optional[Sequence[Pos]] = None,
         circles: Optional[Sequence[Pos]] = None,
         segments: Optional[Sequence[Tuple[Pos, Pos]]] = None,
+        labels: Optional[Sequence[Tuple[Pos, str]]] = None,
         radius: int = 16,
         shape: Tuple[int, int] = (512, 512),
         colors_points: Union[List[Color], Color] = 'lime',
         colors_segments: Union[List[Color], Color] = 'red',
 ) -> np.ndarray:
-    """Draw circle and line segment objects."""
+    """Draws objects on a blank canvas.
+
+    Parameters
+    ----------
+    points
+        Points to draw.
+    circles
+        Circles to draw.
+    segments
+        Segments to draw.
+    labels
+        Labels to draw.
+    radius
+        Radius of drawn circles.
+    shape
+        Shape of canvas.
+    colors_points
+        Color(s) of drawn points.
+    colors_segments
+        Color(s) of drawn segments.
+
+    Returns
+    -------
+    np.ndarray
+        Image with drawn objects.
+
+    """
     ylim, xlim = shape
-    if circles is None:
-        circles = []
-    if segments is None:
-        segments = []
+    circles = circles or []
+    segments = segments or []
+    labels = labels or []
     if isinstance(colors_points, list):
         if len(colors_points) != len(points):
             raise ValueError('Length of color_points and points must match')
@@ -139,6 +167,9 @@ def visualize_objects(
     for idx_seg, segment in enumerate(segments):
         ys, xs = [i for i in zip(*segment)]
         ax.plot(xs, ys, color=colors_segments[idx_seg], linewidth=4.0)
+    for label in labels:
+        y, x = label[0]
+        ax.text(x=x, y=y, s=str(label[1]), color='white', size='large')
     dpi = fig.get_dpi()
     fig.set_size_inches(xlim/dpi, ylim/dpi)
     ax.add_collection(PatchCollection(patches, match_original=True))
@@ -146,8 +177,14 @@ def visualize_objects(
     ax.set_xlim(0, xlim)
     ax.set_axis_off()
     fig.subplots_adjust(bottom=0, top=1, left=0, right=1)
+
+    # Export figure to numpy array. Source: https://stackoverflow.com/a/7821917
     fig.canvas.draw()
-    ar = np.array(fig.canvas.renderer._renderer)[:, :, :3]  # ignore alpha chan
+    shape_fig = fig.canvas.get_width_height()[::-1] + (3,)
+    ar = (
+        np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+        .reshape(shape_fig)
+    )
     plt.close(fig)
     return ar
 
@@ -169,12 +206,11 @@ def _pick_z_index(paths_tifs: List[str], n_check: int = 4) -> int:
         Selected z index.
 
     """
-    print('Picking z index....')
+    logger.info('Picking z index....')
     n_check = min(n_check, len(paths_tifs))
     interval = len(paths_tifs)//n_check
     zs = []
     for idx_t in range(0, len(paths_tifs), interval)[:n_check]:
-        print(idx_t)
         img = tifffile.imread(paths_tifs[idx_t])
         if img.ndim != 3:
             raise ValueError('Images must be 3d')
@@ -183,7 +219,7 @@ def _pick_z_index(paths_tifs: List[str], n_check: int = 4) -> int:
 
 
 def timelapse_3d_to_2d(
-        path_in_dir: str, path_out_dir: str, val_object: int = 64
+        path_in_dir: Path, path_out_dir: Path, val_object: int = 64
 ) -> None:
     """Converts 3d time-lapse tifs into 2d time-lapse tifs.
 
@@ -194,7 +230,7 @@ def timelapse_3d_to_2d(
     path_out_dir
         Directory to save output 2d tifs.
     val_object
-        Value use to color each object.
+        Value used to color each object.
 
     Returns
     -------
@@ -204,11 +240,9 @@ def timelapse_3d_to_2d(
     paths_tifs = images_from_dir(path_in_dir)
     if not paths_tifs:
         raise ValueError('TIF directory is empty.')
-    if not os.path.exists(path_out_dir):
-        os.makedirs(path_out_dir)
+    path_out_dir.mkdir(parents=True, exist_ok=True)
     z_index = _pick_z_index(paths_tifs)
-    print('Converting to 2d image sequence using z index', z_index)
-    dirname = os.path.basename(os.path.normpath(path_in_dir))
+    logger.info('Converting to 2d image sequence using z index %d', z_index)
     for idx_t, path_tif in enumerate(paths_tifs):
         img = tifffile.imread(path_tif)
         if img.ndim != 3:
@@ -216,8 +250,8 @@ def timelapse_3d_to_2d(
         img = (img[z_index, ] > 0).astype(np.uint8)*val_object
         img_line = np.logical_xor(img, binary_erosion(img, iterations=4))
         img[img_line] = 255
-        path_save = os.path.join(
-            path_out_dir, f'{dirname}.{idx_t:03d}.z{z_index}.tif'
+        path_save = Path(
+            path_out_dir, f'{path_in_dir.name}.{idx_t:03d}.z{z_index}.tif'
         )
         save_tif(path_save, img)
 
@@ -240,14 +274,18 @@ class TrackVisualizer:
             segments: Sequence[Tuple[Pos, Pos]],
             colors_centroids: Optional[list] = None,
             colors_segments: Optional[list] = None,
+            labels: Optional[list] = None,
     ) -> np.ndarray:
         """Render image of centroids with tracks.
 
         """
+        if labels is not None:
+            labels = zip(centroids, labels)
         img_centroids = visualize_objects(
             points=centroids,
             shape=self.shape,
             colors_points=colors_centroids,
+            labels=labels,
         )
         img_tracks = _blend_lighten_only(
             (self.img_tracks_prev*self.alpha).round().astype(np.uint8),
@@ -264,39 +302,50 @@ class TrackVisualizer:
 def visualize_tracks_2d(
         df: pd.DataFrame,
         shape: Tuple[int, int],
-        path_save_dir: str,
+        path_save_dir: Path,
         color_map: Optional[Dict] = None,
+        index_max: Optional[int] = None,
+        index_min: Optional[int] = None,
 ) -> None:
-    """
+    """Generates an image sequence of object centroids and their tracking
+    tails.
 
     Parameters
     ----------
     df
-        DataFrame with 'centroid_y' and 'centroid_x' columns.
+        Time-lapse graph DataFrame.
     shape
         Shape of output images.
     path_save_dir
         Directory to save images.
     color_map
         Mapping from track_id to color.
+    index_max
+        Index of last frame to render.
+    index_min
+        Index of first frame to render.
 
     """
-    if not all(col in df.columns for col in ['centroid_y', 'centroid_x']):
-        raise ValueError('"centroid_y", "centroid_x" columns expected in df')
-    if color_map is None:
-        color_map = {}
-    if not os.path.exists(path_save_dir):
-        os.makedirs(path_save_dir)
-        print('Created:', path_save_dir)
+    for col in [
+            'centroid_y', 'centroid_x', 'index_sequence', 'track_id', 'in_list'
+    ]:
+        if col not in df.columns:
+            raise ValueError(f'{col} column expected in df')
+    color_map = color_map or {}
+    index_max = index_max or df['index_sequence'].max()
+    index_min = index_min or df['index_sequence'].min()
+    indices_todo = set(range(index_min, index_max + 1))
+    path_save_dir.mkdir(parents=True, exist_ok=True)
     centroids = df.apply(
         lambda x: np.array([x['centroid_y'], x['centroid_x']]), axis=1
     )
-    if color_map is not None:
-        colors = df['track_id'].apply(lambda x: color_map.get(x))
+    colors = df['track_id'].apply(lambda x: color_map.get(x))
     df = df.assign(centroid=centroids, color=colors)
     track_visualizer = TrackVisualizer(shape=shape)
-    for group, df_g in df.groupby('index_sequence'):
-        print('index_sequence:', group)
+    idx_last = str('inf')
+    for idx, df_g in df.groupby('index_sequence'):
+        if idx not in indices_todo:
+            continue
         segments = []
         colors_segments = []
         for _, row in df_g.iterrows():
@@ -306,13 +355,24 @@ def visualize_tracks_2d(
                     row.centroid,
                 ))
                 colors_segments.append(color_map.get(row['track_id']))
-        path_tif = os.path.join(path_save_dir, f'{group:03d}_tracks.tif')
+        path_tif = Path(path_save_dir, f'{idx:03d}_tracks.tif')
         img = track_visualizer.render(
             centroids=df_g['centroid'].tolist(),
             segments=segments,
             colors_centroids=df_g['color'].tolist(),
             colors_segments=colors_segments,
+            labels=df_g['track_id'].tolist(),
         )
-        tifffile.imsave(path_tif, img, compress=2)
-        print('Saved:', path_tif)
-    print('Done!!!')
+        save_tif(path_tif, img)
+        indices_todo.remove(idx)
+        idx_last = idx
+    logger.info(f'Creating blanks for frames: {list(indices_todo)}')
+    # Create blank images for frames with no tracks
+    while indices_todo:
+        idx = indices_todo.pop()
+        path_tif = Path(path_save_dir, f'{idx:03d}_tracks.tif')
+        if idx > idx_last:
+            img = track_visualizer.render(centroids=[], segments=[])
+        else:
+            img = np.zeros(shape + (3,), dtype=np.uint8)
+        save_tif(path_tif, img)
