@@ -1,10 +1,8 @@
-from typing import List
-
 import pandas as pd
 
 
-def find_longest_tracks(df: pd.DataFrame) -> List[int]:
-    """Returns sorted list of track_ids of longest track(s).
+def calc_track_lengths(df: pd.DataFrame) -> pd.Series:
+    """Returns track_ids sorted by track length.
 
     Parameters
     ----------
@@ -21,10 +19,7 @@ def find_longest_tracks(df: pd.DataFrame) -> List[int]:
         .nunique()
         .sort_values(ascending=False)
     )
-    track_ids = sorted(
-        track_lengths.loc[track_lengths == track_lengths.max()].index
-    )
-    return track_ids
+    return track_lengths
 
 
 def add_delta_pos(df: pd.DataFrame) -> pd.DataFrame:

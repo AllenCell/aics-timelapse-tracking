@@ -1,3 +1,4 @@
+
 from typing import List, Sequence, Tuple, Union, Optional
 
 from scipy.optimize import linprog
@@ -16,7 +17,7 @@ def _calc_dist(
 def _calc_pos_edges(
         centroids_a: np.ndarray,
         centroids_b: np.ndarray,
-        thresh_dist: float = 64.,
+        thresh_dist: float = 45.,
         allow_splits: bool = False,
         thresh_split: Optional[float] = None,
         cost_add: Optional[float] = None,
@@ -119,8 +120,15 @@ def _calc_pos_edges(
 def find_correspondances(
         centroids_a: np.ndarray,
         centroids_b: np.ndarray,
+        method_first: str = 'simplex',
 ):
     """Find correspondances from a to b using centroids."""
+    if method_first == 'simplex':
+        methods = ['simplex', 'interior-point']
+    elif method_first == 'interior-point':
+        methods = ['interior-point', 'simplex']
+    else:
+        raise ValueError('Method first must be "simplex" or "interior-point"')
     pos_edges, costs, indices_left, indices_right = _calc_pos_edges(
         centroids_a, centroids_b
     )
@@ -132,7 +140,7 @@ def find_correspondances(
         constraint[indices] = 1
         A_eq.append(constraint)
     b_eq = [1]*len(A_eq)
-    for method in ['simplex', 'interior-point']:
+    for method in methods:
         result = linprog(
             c=costs,
             A_eq=A_eq,

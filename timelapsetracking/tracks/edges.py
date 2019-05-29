@@ -9,8 +9,25 @@ from timelapsetracking.tracks.correspondances import find_correspondances
 def add_edges(
         df: pd.DataFrame,
         col_index_sequence: str = 'index_sequence',
-):
-    """Add edges to track graph based on centroids."""
+        method_first: str = 'interior-point',
+) -> pd.DataFrame:
+    """Add edges to track graph based on centroids.
+
+    Parameters
+    ----------
+    df
+        Input time-lapse graph with unconnected nodes.
+    col_index_sequence
+        DataFrame column corresponding to the time-lapse frame/sequence number.
+    method_first
+        Linear programming method to try first.
+
+    Returns
+    -------
+    pd.DataFrame
+        Time-lapse graph with added edges
+
+    """
     if col_index_sequence not in df.columns:
         raise ValueError(f'"{col_index_sequence}" column expected in df')
     df_prev = None
@@ -26,7 +43,9 @@ def add_edges(
             continue
         centroids_prev = df_prev.filter(cols_zyx).values
         centroids_curr = df_curr.filter(cols_zyx).values
-        edges = find_correspondances(centroids_prev, centroids_curr)
+        edges = find_correspondances(
+            centroids_prev, centroids_curr, method_first=method_first
+        )
         for edge in edges:
             if edge[0] is not None and edge[1] is not None:
                 idx_prev = df_prev.index[edge[0]]
