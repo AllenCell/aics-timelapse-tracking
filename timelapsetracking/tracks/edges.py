@@ -1,15 +1,19 @@
 """Functions to find connections between nodes in time-lapse graph."""
 
+import logging
 
 import pandas as pd
 
 from timelapsetracking.tracks.correspondances import find_correspondances
 
 
+logger = logging.getLogger(__name__)
+
+
 def add_edges(
         df: pd.DataFrame,
         col_index_sequence: str = 'index_sequence',
-        method_first: str = 'interior-point',
+        **kwargs,
 ) -> pd.DataFrame:
     """Add edges to track graph based on centroids.
 
@@ -19,8 +23,8 @@ def add_edges(
         Input time-lapse graph with unconnected nodes.
     col_index_sequence
         DataFrame column corresponding to the time-lapse frame/sequence number.
-    method_first
-        Linear programming method to try first.
+    **kwargs
+        Additional arguments to be passed to find_correspondances function.
 
     Returns
     -------
@@ -34,25 +38,30 @@ def add_edges(
     cols_zyx = ['centroid_z', 'centroid_y', 'centroid_x']
     df_edges = (
         pd.DataFrame(index=df.index, columns=['in_list', 'out_list'])
-        .fillna('')
+        .fillna('[]')
     )
     for idx_s, df_curr in df.groupby(col_index_sequence):
-        print(f'Processing {col_index_sequence}:', idx_s)
+        logger.info(f'Processing {col_index_sequence}: {idx_s}')
         if df_prev is None:
             df_prev = df_curr
             continue
         centroids_prev = df_prev.filter(cols_zyx).values
         centroids_curr = df_curr.filter(cols_zyx).values
         edges = find_correspondances(
-            centroids_prev, centroids_curr, method_first=method_first
+            centroids_prev, centroids_curr, **kwargs
         )
-        for edge in edges:
-            if edge[0] is not None and edge[1] is not None:
-                idx_prev = df_prev.index[edge[0]]
-                if isinstance(edge[1], tuple):
-                    raise NotImplementedError
-                idx_curr = df_curr.index[edge[1]]
-                df_edges.loc[idx_prev, 'out_list'] = str(idx_curr)
-                df_edges.loc[idx_curr, 'in_list'] = str(idx_prev)
+        for edge_from, edge_to in edges:
+            if edge_from is None or edge_to is None:
+                continue
+            idx_prev = df_prev.index[edge_from]
+            if isinstance(edge_to, int):
+                edge_to = [edge_to]
+            elif isinstance(edge_to, tuple):
+                # Convert to list for proper indexing below
+                edge_to = list(edge_to)
+            indices_curr = list(df_curr.index[edge_to])
+            df_edges.loc[idx_prev, 'out_list'] = str(indices_curr)
+            for idx_curr in indices_curr:
+                df_edges.loc[idx_curr, 'in_list'] = f'[{idx_prev}]'
         df_prev = df_curr
     return df.join(df_edges)
