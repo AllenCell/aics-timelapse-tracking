@@ -1,6 +1,5 @@
 from typing import Dict, List
 
-import numpy as np
 import pandas as pd
 
 
@@ -65,15 +64,15 @@ def add_track_ids(df: pd.DataFrame) -> pd.DataFrame:
         New DataFrame with added 'track_id' column.
 
     """
+
+    def convert(x: str) -> List[int]:
+        return [
+            int(y) for y in x[1: -1].replace(' ', '').split(',') if y.isdigit()
+        ]
+
     if 'in_list' not in df.columns or 'out_list' not in df.columns:
         raise ValueError('"in_list", "out_list" columns expect in df')
-    in_list = {
-        k: ([] if np.isnan(v) else [int(v)])
-        for k, v in df['in_list'].to_dict().items()
-    }
-    out_list = {
-        k: ([] if np.isnan(v) else [int(v)])
-        for k, v in df['out_list'].to_dict().items()
-    }
+    in_list = {k: convert(v) for k, v in df['in_list'].to_dict().items()}
+    out_list = {k: convert(v) for k, v in df['out_list'].to_dict().items()}
     wcc_map = _calc_weakly_connected_components(in_list, out_list)
     return df.assign(track_id=pd.Series(wcc_map))
