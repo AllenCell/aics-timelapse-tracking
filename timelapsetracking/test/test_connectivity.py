@@ -1,6 +1,8 @@
 from collections import defaultdict
 from typing import List
 
+import pandas as pd
+
 from timelapsetracking.tracks import connectivity
 
 
@@ -97,21 +99,18 @@ def test_graph_valid():
     assert not connectivity.graph_valid(out_lists)
 
 
-def test__calc_weakly_connected_components():
-    """Tests _calc_weakly_connected_components function."""
+def test_add_connectivity_labels():
+    """Tests add_connectivity_labels function."""
     out_lists = _get_test_out_lists()
-    wccs = connectivity._calc_weakly_connected_components(out_lists)
-    assert wccs.keys() == out_lists.keys()
-    lineage_groups_got = _labels_to_groups(wccs)
+    entries = [
+        {'node_id': k, 'out_list': str(v)} for k, v in out_lists.items()
+    ]
+    df = pd.DataFrame(entries).set_index('node_id')
+    df = connectivity.add_connectivity_labels(df)
+    assert 'lineage_id' in df.columns and 'track_id' in df.columns
+    lineage_groups_got = _labels_to_groups(df['lineage_id'].to_dict())
     lineage_groups_exp = _get_test_lineage_id_groups()
     assert _label_groups_equal(lineage_groups_got, lineage_groups_exp)
-
-
-def test__calc_track_ids():
-    """Tests _calc_track_ids function."""
-    out_lists = _get_test_out_lists()
-    track_ids = connectivity._calc_track_ids(out_lists)
-    assert track_ids.keys() == out_lists.keys()
-    track_groups_got = _labels_to_groups(track_ids)
+    track_groups_got = _labels_to_groups(df['track_id'].to_dict())
     track_groups_exp = _get_test_track_id_groups()
     assert _label_groups_equal(track_groups_got, track_groups_exp)
