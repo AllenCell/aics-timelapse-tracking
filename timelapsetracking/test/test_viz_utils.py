@@ -27,7 +27,7 @@ def test_vizualize_tracks_2d(tmp_path):
         viz_utils.visualize_tracks_2d(
             df=df_graph, shape=shape, path_save_dir=tmp_path
         )
-    df_graph['in_list'] = [None, 0, 1, None, 3, 4]
+    df_graph['in_list'] = [str(x) for x in [[], [0], [1], [], [3], [4]]]
     last_frame = 7
     cm = viz_utils.get_color_mapping(df_graph['track_id'])
     viz_utils.visualize_tracks_2d(

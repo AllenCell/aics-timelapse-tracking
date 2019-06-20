@@ -1,10 +1,10 @@
-from timelapsetracking.tracks.analysis import find_longest_tracks
-from timelapsetracking.tracks.connectivity import add_track_ids
+from timelapsetracking.tracks.analysis import calc_track_lengths
+from timelapsetracking.tracks.connectivity import add_connectivity_labels
 from timelapsetracking.tracks.edges import add_edges
 
 
 __all__ = [
+    'add_connectivity_labels',
     'add_edges',
-    'add_track_ids',
-    'find_longest_tracks',
+    'calc_track_lengths',
 ]

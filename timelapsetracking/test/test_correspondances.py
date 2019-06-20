@@ -2,7 +2,6 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 import numpy.testing as npt
-import pytest
 
 from timelapsetracking.tracks.correspondances import find_correspondances
 
@@ -63,20 +62,27 @@ def _test_matches(
     """
     nd = centroids_0.shape[1]
     prev = None
+    min_count = len(centroids_0)
+    max_count = max(len(centroids_0), len(centroids_1))
     for idx_t in range(4):
         if idx_t > 0:
             rng.shuffle(centroids_0)
             rng.shuffle(centroids_1)
         matching = find_correspondances(centroids_0, centroids_1)
-        assert len(matching) == max(len(centroids_0), len(centroids_1))
+        assert min_count <= len(matching) <= max_count
         matching_as_centroids = []
-        for idx_0, idx_1 in matching:
+        for idx_0, indices_1 in matching:
+            if isinstance(indices_1, int) or indices_1 is None:
+                indices_1 = [indices_1]
             # Use -1 to indicate coordinate of none existant centroid
             centroid_0 = centroids_0[idx_0] if idx_0 is not None else [-1]*nd
-            centroid_1 = centroids_1[idx_1] if idx_1 is not None else [-1]*nd
-            matching_as_centroids.append(np.concatenate(
-                [centroid_0, centroid_1], axis=0
-            ))
+            for idx_1 in indices_1:
+                centroid_1 = (
+                    centroids_1[idx_1] if idx_1 is not None else [-1]*nd
+                )
+                matching_as_centroids.append(np.concatenate(
+                    [centroid_0, centroid_1], axis=0
+                ))
         matching_as_centroids = np.sort(
             np.array(matching_as_centroids), axis=0
         )
@@ -112,7 +118,7 @@ def test_add():
     """Test correspondance when some centroids are added."""
     rng = np.random.RandomState(666)
     centroids_0, centroids_1 = _get_centroid_sets(rng)
-    added = [[22, 33], [44, 55]]
+    added = [[128, 64], [128, 64]]
     centroids_1 = np.concatenate([centroids_1, added], axis=0)
     _test_matches(
         centroids_0=centroids_0,
@@ -141,33 +147,19 @@ def test_blanks():
     )
 
 
-@pytest.mark.skip(reason='Split handling currently not implemented')
 def test_mitosis():
     """Test mitosis case."""
-    import random
-    random.seed(666)
-    centroids_0 = [
-        (16, 16),
-        (16, 256),
-        (256, 16),
-        (256, 256),
-    ]
-    centroids_1 = []
-    for idx_c in [1, 2]:
-        centroid_new = tuple(
-            coord + random.gauss(0, 4) for coord in centroids_0[idx_c]
-        )
-        centroids_1.append(centroid_new)
-    centroid_new = tuple(
-        coord + random.gauss(0, 4) for coord in centroids_0[1]
+    rng = np.random.RandomState(666)
+    centroids_0, centroids_1 = _get_centroid_sets(rng)
+    # Create additional child for objects 1 and 2 of first group
+    children = []
+    for cen in centroids_0[[1, 2], :]:
+        children.append([coord + rng.normal(scale=4) for coord in cen])
+    centroids_1 = np.concatenate((centroids_1, children))
+    centroids_1 = np.concatenate((centroids_1, [[88, 66], [0, 128]]))
+    _test_matches(
+        centroids_0,
+        centroids_1,
+        [(0, 0), (1, (1, 4)), (2, (2, 5)), (3, 3), (None, 6), (None, 7)],
+        rng,
     )
-    centroids_1.append(centroid_new)
-    delta = 10
-    centroids_1.append((256, 256 - delta))
-    centroids_1.append((256, 256 + delta - 1))
-    centroids_1.append((128, 128))  # Appearing centroid
-    matches = find_correspondances(centroids_0, centroids_1)
-    matches_exp = (
-        (0, None), (1, (0, 2)), (2, 1), (3, 4), (None, 3), (None, 5)
-    )
-    assert _matchings_equal(matches, matches_exp)

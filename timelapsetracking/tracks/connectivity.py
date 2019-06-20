@@ -1,7 +1,55 @@
-from typing import Dict, List
+from typing import Dict, List, Union
+import ast
 
-import numpy as np
 import pandas as pd
+
+
+NodeType = Union[int, str]
+NodetoEdgesMap = Dict[NodeType, List[NodeType]]
+
+
+def _in_from_out(out_lists: NodetoEdgesMap):
+    """Generates dict of in_lists from dict of out_lists."""
+    in_lists = {k: [] for k in out_lists}
+    for parent, children in out_lists.items():
+        for child in children:
+            in_lists[child].append(parent)
+    return in_lists
+
+
+def graph_valid(out_lists: NodetoEdgesMap) -> bool:
+    """Verifies that input graph is valid.
+
+    Acyclic. For each node, at most 1 in edge and at most 2 out edges.
+
+    """
+
+    def _valid_helper(v: NodeType) -> bool:
+        """Validates input node and its children."""
+        being_explored[v] = True
+        # Check for too many in or out edges
+        if len(in_lists[v]) > 1 or len(out_lists[v]) > 2:
+            return False
+        for child in out_lists[v]:
+            if child not in being_explored:
+                if not _valid_helper(child):
+                    return False
+            elif being_explored[child]:  # Cycle detected
+                return False
+        being_explored[v] = False
+        return True
+
+    in_lists = _in_from_out(out_lists)
+    # being_explored maps from node to whether node is currently being explored
+    #   no key: node has not been visited
+    #   value == True: node is being explored
+    #   value == False: node and its children have been explored
+    being_explored = {}
+    for v in out_lists:
+        if v not in being_explored:
+            if not _valid_helper(v):
+                return False
+    return True
 
 
 class _Explorer:
@@ -19,7 +67,7 @@ class _Explorer:
 
 
 def _calc_weakly_connected_components(
-        in_list: Dict[int, List[int]], out_list: Dict[int, List[int]]
+        out_lists: Dict[int, List[int]]
 ) -> Dict[int, int]:
     """Maps nodes to unique weakly-connected component (WCC) ids. In the
     context of cell tracks, each wcc identifies tracks that originate from the
@@ -27,9 +75,7 @@ def _calc_weakly_connected_components(
 
     Parameters
     ----------
-    in_list
-        'in' edges for each node
-    out_list
+    out_lists
         'out' edges for each node
 
     Returns
@@ -38,9 +84,8 @@ def _calc_weakly_connected_components(
         Mapping from nodes to WCC ids.
 
     """
-    if in_list.keys() != out_list.keys():
-        raise ValueError('Input lists must have same keys')
-    adj_list = {k: (in_list[k] + out_list[k]) for k in in_list.keys()}
+    in_lists = _in_from_out(out_lists)
+    adj_list = {k: (in_lists[k] + out_lists[k]) for k in in_lists.keys()}
     explorer = _Explorer(adj_list)
     wcc = 0
     for node in adj_list.keys():
@@ -51,8 +96,39 @@ def _calc_weakly_connected_components(
     return explorer.wcc_list
 
 
-def add_track_ids(df: pd.DataFrame) -> pd.DataFrame:
-    """Labels nodes in time-lapse graph with track ids.
+def _calc_track_ids(
+        out_lists: Dict[int, List[int]]
+) -> Dict[int, int]:
+    """Returns mapping from node to track_id.
+
+    Assumes all trees in the graph are single-sourced and acyclic.
+
+    """
+    in_lists = _in_from_out(out_lists)
+    track_ids = {}
+    track_id = 0
+    for source in out_lists.keys():
+        if len(in_lists[source]) != 0:
+            continue
+        stack = [(source, track_id)]
+        track_id += 1
+        while len(stack) > 0:
+            v, val = stack.pop()
+            if v in track_ids:
+                raise ValueError('Invalid input graph')
+            track_ids[v] = val
+            children = out_lists[v]
+            if len(children) == 1:
+                stack.append((children[0], val))
+            elif len(children) > 1:
+                for child in children:
+                    stack.append((child, track_id))
+                    track_id += 1
+    return track_ids
+
+
+def add_connectivity_labels(df: pd.DataFrame) -> pd.DataFrame:
+    """Labels nodes in time-lapse graph with lineage and track ids.
 
     Parameters
     ----------
@@ -62,18 +138,20 @@ def add_track_ids(df: pd.DataFrame) -> pd.DataFrame:
     Returns
     -------
     pd.DataFrame
-        New DataFrame with added 'track_id' column.
+        New DataFrame with added 'lineage_id' and 'track_id' columns.
 
     """
-    if 'in_list' not in df.columns or 'out_list' not in df.columns:
-        raise ValueError('"in_list", "out_list" columns expect in df')
-    in_list = {
-        k: ([] if np.isnan(v) else [int(v)])
-        for k, v in df['in_list'].to_dict().items()
-    }
-    out_list = {
-        k: ([] if np.isnan(v) else [int(v)])
+    if 'out_list' not in df.columns:
+        raise ValueError('"out_list" column expected in df')
+    out_lists = {
+        k: ast.literal_eval(v) if isinstance(v, str) else v
         for k, v in df['out_list'].to_dict().items()
     }
-    wcc_map = _calc_weakly_connected_components(in_list, out_list)
-    return df.assign(track_id=pd.Series(wcc_map))
+    if not graph_valid(out_lists):
+        raise ValueError('Bad input graph')
+    lineage_ids = _calc_weakly_connected_components(out_lists)
+    track_ids = _calc_track_ids(out_lists)
+    return df.assign(
+        lineage_id=pd.Series(lineage_ids),
+        track_id=pd.Series(track_ids),
+    )

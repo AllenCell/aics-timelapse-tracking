@@ -17,6 +17,7 @@ import tifffile
 from timelapsetracking.util import images_from_dir
 
 
+plt.switch_backend('Agg')
 Pos = Tuple[float, float]
 Color = Union[str, Sequence[float]]
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ def get_color_mapping(
     Parameters
     ----------
     identifiers
-        Sequence of identifiers.
+        Sequence of unique identifiers.
     cmap_mpl
         Matplotlib ColorMap from which to choose colors.
 
@@ -41,7 +42,6 @@ def get_color_mapping(
 
     """
     cm = matplotlib.cm.get_cmap(cmap_mpl)
-    identifiers = set(identifiers)  # to ensure uniqueness
     id_to_color = {}
     floaties = np.linspace(0., 1., len(identifiers))
     for idx, item in enumerate(identifiers):
@@ -148,7 +148,7 @@ def visualize_objects(
     fig, ax = plt.subplots(facecolor='black')
     if points:
         points_y, points_x = [coord for coord in zip(*points)]
-        ax.scatter(points_x, points_y, c=colors_points, s=64.0)
+        ax.scatter(points_x, points_y, c=colors_points, s=50.0)
     for center in circles:
         kwargs = {
             'color': 'salmon',
@@ -349,9 +349,15 @@ def visualize_tracks_2d(
         segments = []
         colors_segments = []
         for _, row in df_g.iterrows():
-            if not np.isnan(row.in_list):
+            indices_segs = [
+                int(x) for x in row.in_list[1: -1].replace(' ', '').split(',')
+                if x.isdigit()
+            ]
+            if len(indices_segs) > 1:
+                raise NotImplementedError
+            if len(indices_segs) > 0:
                 segments.append((
-                    df.loc[int(row.in_list), 'centroid'],
+                    df.loc[indices_segs[0], 'centroid'],
                     row.centroid,
                 ))
                 colors_segments.append(color_map.get(row['track_id']))
