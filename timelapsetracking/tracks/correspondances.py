@@ -192,5 +192,4 @@ def find_correspondances(
         raise ValueError
     indices = np.where(np.round(result.x))[0]
     edges = [pos_edges[idx] for idx in indices]
-    # import pdb; pdb.set_trace()
     return edges
