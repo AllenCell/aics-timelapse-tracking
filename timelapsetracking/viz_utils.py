@@ -20,7 +20,7 @@ from timelapsetracking.util import images_from_dir
 plt.switch_backend('Agg')
 Pos = Tuple[float, float]
 Color = Union[str, Sequence[float]]
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 def get_color_mapping(
@@ -65,7 +65,7 @@ def save_tif(path_save: str, img: np.ndarray) -> None:
     if img.dtype == bool:
         img = img.astype(np.uint8)*255
     tifffile.imsave(path_save, img, compress=2)
-    logger.info('Saved: %s', path_save)
+    LOGGER.info('Saved: %s', path_save)
 
 
 def _overlay(img_b: np.ndarray, img_o: np.ndarray) -> np.ndarray:
@@ -206,7 +206,7 @@ def _pick_z_index(paths_tifs: List[str], n_check: int = 4) -> int:
         Selected z index.
 
     """
-    logger.info('Picking z index....')
+    LOGGER.info('Picking z index....')
     n_check = min(n_check, len(paths_tifs))
     interval = len(paths_tifs)//n_check
     zs = []
@@ -242,7 +242,7 @@ def timelapse_3d_to_2d(
         raise ValueError('TIF directory is empty.')
     path_out_dir.mkdir(parents=True, exist_ok=True)
     z_index = _pick_z_index(paths_tifs)
-    logger.info('Converting to 2d image sequence using z index %d', z_index)
+    LOGGER.info('Converting to 2d image sequence using z index %d', z_index)
     for idx_t, path_tif in enumerate(paths_tifs):
         img = tifffile.imread(path_tif)
         if img.ndim != 3:
@@ -327,7 +327,8 @@ def visualize_tracks_2d(
 
     """
     for col in [
-            'centroid_y', 'centroid_x', 'index_sequence', 'track_id', 'in_list'
+            'centroid_y', 'centroid_x', 'index_sequence', 'track_id',
+            'lineage_id', 'in_list',
     ]:
         if col not in df.columns:
             raise ValueError(f'{col} column expected in df')
@@ -339,7 +340,7 @@ def visualize_tracks_2d(
     centroids = df.apply(
         lambda x: np.array([x['centroid_y'], x['centroid_x']]), axis=1
     )
-    colors = df['track_id'].apply(lambda x: color_map.get(x))
+    colors = df['lineage_id'].apply(lambda x: color_map.get(x))
     df = df.assign(centroid=centroids, color=colors)
     track_visualizer = TrackVisualizer(shape=shape)
     idx_last = str('inf')
@@ -360,19 +361,24 @@ def visualize_tracks_2d(
                     df.loc[indices_segs[0], 'centroid'],
                     row.centroid,
                 ))
-                colors_segments.append(color_map.get(row['track_id']))
+                colors_segments.append(color_map.get(row['lineage_id']))
         path_tif = Path(path_save_dir, f'{idx:03d}_tracks.tif')
+        labels = [
+            f'{l}:{t}' for l, t in zip(
+                df_g['lineage_id'].tolist(), df_g['track_id'].tolist()
+            )
+        ]
         img = track_visualizer.render(
             centroids=df_g['centroid'].tolist(),
             segments=segments,
             colors_centroids=df_g['color'].tolist(),
             colors_segments=colors_segments,
-            labels=df_g['track_id'].tolist(),
+            labels=labels,
         )
         save_tif(path_tif, img)
         indices_todo.remove(idx)
         idx_last = idx
-    logger.info(f'Creating blanks for frames: {list(indices_todo)}')
+    LOGGER.info(f'Creating blanks for frames: {list(indices_todo)}')
     # Create blank images for frames with no tracks
     while indices_todo:
         idx = indices_todo.pop()
