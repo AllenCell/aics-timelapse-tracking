@@ -7,7 +7,7 @@ import pandas as pd
 from timelapsetracking.tracks.correspondances import find_correspondances
 
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 def add_edges(
@@ -40,8 +40,10 @@ def add_edges(
         pd.DataFrame(index=df.index, columns=['in_list', 'out_list'])
         .fillna('[]')
     )
-    for idx_s, df_curr in df.groupby(col_index_sequence):
-        logger.info(f'Processing {col_index_sequence}: {idx_s}')
+    index_vals = df[col_index_sequence].unique()
+    for idx_s in range(index_vals.min(), index_vals.max() + 1):
+        LOGGER.info(f'Processing {col_index_sequence}: {idx_s}')
+        df_curr = df.query(f'{col_index_sequence} == @idx_s')
         if df_prev is None:
             df_prev = df_curr
             continue
