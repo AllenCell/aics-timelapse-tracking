@@ -1,25 +1,34 @@
 import pandas as pd
 
 
-def calc_track_lengths(df: pd.DataFrame) -> pd.Series:
-    """Returns track_ids sorted by track length.
+def calc_track_lengths(
+        df: pd.DataFrame, use_lineage_id: bool = False
+) -> pd.Series:
+    """Returns track or lineage ids sorted by frame count.
 
     Parameters
     ----------
     df
         DataFrame representing time-lapse graph with 'track_id' column.
+    use_lineage_id
+        Set to calculate frame counts for each lineage id instead of track id.
+
+    Returns
+    -------
+    pd.Series
+        Track or lineage lengths.
 
     """
-    if 'track_id' not in df.columns:
-        raise ValueError('"track_id" column expected in df')
-    # For each track_id, count number of unique frames to get track length
-    track_lengths = (
+    col = 'track_id' if not use_lineage_id else 'lineage_id'
+    if col not in df.columns:
+        raise ValueError(f'{col} column expected in df')
+    lengths = (
         df
-        .groupby('track_id')['index_sequence']
+        .groupby(col)['index_sequence']
         .nunique()
         .sort_values(ascending=False)
     )
-    return track_lengths
+    return lengths
 
 
 def add_delta_pos(df: pd.DataFrame) -> pd.DataFrame:

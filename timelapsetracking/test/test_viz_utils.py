@@ -19,6 +19,7 @@ def test_vizualize_tracks_2d(tmp_path):
             'centroid_y': [6, 10, 14, 30, 25, 20],
             'centroid_x': [8, 18, 28, 60, 50, 40],
             'index_sequence': [0, 1, 2, 0, 1, 2],
+            'lineage_id': [666, 666, 666, 777, 777, 777],
             'track_id': [666, 666, 666, 777, 777, 777],
         }
     ).rename_axis('node_id', axis=0)
@@ -29,7 +30,7 @@ def test_vizualize_tracks_2d(tmp_path):
         )
     df_graph['in_list'] = [str(x) for x in [[], [0], [1], [], [3], [4]]]
     last_frame = 7
-    cm = viz_utils.get_color_mapping(df_graph['track_id'])
+    cm = viz_utils.get_color_mapping(df_graph['lineage_id'])
     viz_utils.visualize_tracks_2d(
         df=df_graph,
         shape=shape,
