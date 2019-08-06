@@ -23,7 +23,6 @@ def _calc_pos_edges(
         centroids_b: np.ndarray,
         thresh_dist: float,
         allow_splits: bool,
-        thresh_split: float,
         cost_add: float,
         cost_delete: float,
 ) -> Tuple[Sequence[List], Sequence[float], Sequence[List], Sequence[List]]:
@@ -43,8 +42,6 @@ def _calc_pos_edges(
         Maximum distance between potentially linked objects.
     allow_splits
         Set to allow object splits.
-    thresh_split
-        Maximum distance between child objects after a split.
     cost_add
         Cost of object creation.
     cost_delete
@@ -57,7 +54,7 @@ def _calc_pos_edges(
 
     """
     if len(centroids_a) == 0 and len(centroids_b) == 0:
-        return []
+        return [], [], [], []
     elif len(centroids_a) > 0 and len(centroids_b) == 0:
         neighbors = [[] for _ in range(len(centroids_a))]
     elif len(centroids_a) == 0 and len(centroids_b) > 0:
@@ -81,28 +78,36 @@ def _calc_pos_edges(
                 cost = cost_delete
             pos_edges.append((idx_a, idx_b))
             costs.append(cost)
-        # Add edges for potential splits
         if allow_splits and len(indices_b) > 1:
-            tree_neighbors = KDTree(tree_b.data[indices_b, ])
-            pairs = tree_neighbors.query_pairs(thresh_split)
-            for pair in pairs:
-                idx_e = len(pos_edges)
-                cost_split = (
-                    _calc_dist(
-                        tree_a.data[idx_a], tree_neighbors.data[pair, ]
-                    ).mean()
-                    # + _calc_dist(
-                    #     tree_neighbors.data[pair[0], ],
-                    #     tree_neighbors.data[pair[1], ],
-                    # )
+            # Determine possible splits by two criteria: the angles and the
+            # magnitudes of the displacement vectors. Two objects in the second
+            # object group might be paired children if their displacement
+            # vector angles are ~-180 apart and if the magnitudes are similar.
+            displacements = tree_b.data[indices_b] - tree_a.data[idx_a]
+            mags = np.sqrt(np.sum(displacements**2, axis=1))
+            displacements /= mags[:, np.newaxis]
+            maxes = np.maximum(mags[:, np.newaxis], mags[np.newaxis, ])
+            diffs = mags[:, np.newaxis] - mags[np.newaxis, ]
+            ndiffs = np.absolute(diffs)/maxes  # error relative to max
+            angles = displacements.dot(displacements.T)
+            # TODO: make thresholds function parameters
+            mask = np.logical_and(ndiffs < 0.7, np.tril(angles, -1) < -0.85)
+            for indices_d in zip(*np.where(mask)):
+                ordered = (
+                    indices_d if indices_d[0] < indices_d[1] else
+                    indices_d[1], indices_d[0]
                 )
-                # Convert back original indices in tree_b
-                indices_pair = (indices_b[pair[0]], indices_b[pair[1]])
+                pair = (indices_b[ordered[0]], indices_b[ordered[1]])
+                cost_split = _calc_dist(
+                    tree_a.data[idx_a], tree_b.data[pair, ]
+                ).sum()
+                idx_e = len(pos_edges)
                 indices_left[idx_a].append(idx_e)
-                indices_right[indices_pair[0]].append(idx_e)
-                indices_right[indices_pair[1]].append(idx_e)
-                pos_edges.append((idx_a, indices_pair))
+                indices_right[pair[0]].append(idx_e)
+                indices_right[pair[1]].append(idx_e)
+                pos_edges.append((idx_a, pair))
                 costs.append(cost_split)
+
     # Add in "add" edges
     for idx_b in range(len(centroids_b)):
         idx_e = len(pos_edges)
@@ -118,7 +123,6 @@ def find_correspondances(
         method_first: str = 'interior-point',
         thresh_dist: float = 45.,
         allow_splits: bool = True,
-        thresh_split: Optional[float] = None,
         cost_add: Optional[float] = None,
         cost_delete: Optional[float] = None,
 ):
@@ -136,8 +140,6 @@ def find_correspondances(
         Maximum distance between potentially linked objects.
     allow_splits
         Set to allow object splits.
-    thresh_split
-        Maximum distance between child objects after a split.
     cost_add
         Cost of object creation.
     cost_delete
@@ -156,7 +158,6 @@ def find_correspondances(
         methods = ['interior-point', 'simplex']
     else:
         raise ValueError('Method first must be "simplex" or "interior-point"')
-    thresh_split = thresh_split or thresh_dist
     cost_add = cost_add or thresh_dist*1.1
     cost_delete = cost_delete or thresh_dist*1.1
     pos_edges, costs, indices_left, indices_right = _calc_pos_edges(
@@ -164,7 +165,6 @@ def find_correspondances(
         centroids_b=centroids_b,
         thresh_dist=thresh_dist,
         allow_splits=allow_splits,
-        thresh_split=thresh_split,
         cost_add=cost_add,
         cost_delete=cost_delete,
     )

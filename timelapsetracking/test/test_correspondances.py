@@ -3,6 +3,7 @@ from typing import List, Optional, Tuple
 import numpy as np
 import numpy.testing as npt
 
+from timelapsetracking.tracks.correspondances import _calc_pos_edges
 from timelapsetracking.tracks.correspondances import find_correspondances
 
 
@@ -151,15 +152,30 @@ def test_mitosis():
     """Test mitosis case."""
     rng = np.random.RandomState(666)
     centroids_0, centroids_1 = _get_centroid_sets(rng)
-    # Create additional child for objects 1 and 2 of first group
-    children = []
-    for cen in centroids_0[[1, 2], :]:
-        children.append([coord + rng.normal(scale=4) for coord in cen])
-    centroids_1 = np.concatenate((centroids_1, children))
-    centroids_1 = np.concatenate((centroids_1, [[88, 66], [0, 128]]))
+    # Create additional child for objects 0 and 3. For object 0, second child
+    # compatible with mitosis (movement vector of first child rotated 180). For
+    # object 3, second child incompabile with mitosis (movement vector of first
+    # child rotated by 90).
+    child_mito = (
+        centroids_0[0, :] +
+        np.array([[-1.1, 0], [0, -1.1]]).dot(centroids_1[0, :] - centroids_0[0, :])
+    )
+    child_non_mito = (
+        centroids_0[3, :] +
+        np.array([[0, -1.1], [1.1, 0]]).dot(centroids_1[3, :] - centroids_0[3, :])
+    )
+    centroids_1 = np.concatenate((centroids_1, [child_mito, child_non_mito]))
+    edges, costs, left, right = _calc_pos_edges(
+        centroids_0,
+        centroids_1,
+        allow_splits=True,
+        thresh_dist=32.,
+        cost_add=40.,
+        cost_delete=40.,
+    )
     _test_matches(
         centroids_0,
         centroids_1,
-        [(0, 0), (1, (1, 4)), (2, (2, 5)), (3, 3), (None, 6), (None, 7)],
+        [(0, (0, 4)), (1, 1), (2, 2), (3, 3), (None, 5)],
         rng,
     )
