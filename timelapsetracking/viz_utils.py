@@ -388,3 +388,23 @@ def visualize_tracks_2d(
         else:
             img = np.zeros(shape + (3,), dtype=np.uint8)
         save_tif(path_tif, img)
+
+
+def render_centroid_groups(
+        centroids_0: np.ndarray,
+        centroids_1: np.ndarray,
+        shape: Sequence[int],
+) -> None:
+    """Plot centroids from two groups."""
+    plt.switch_backend('TkAgg')
+    fig, ax = plt.subplots(figsize=(8, 8))
+    ax.scatter(centroids_0[:, -1], centroids_0[:, -2], marker='.')
+    for idx, cen in enumerate(centroids_0):
+        ax.text(cen[-1], cen[-2], s=idx)
+    ax.scatter(centroids_1[:, -1], centroids_1[:, -2], marker='.')
+    for idx, cen in enumerate(centroids_1):
+        ax.text(cen[-1], cen[-2], s=idx)
+    ax.set_ylim([0, shape[0]])
+    ax.set_xlim([0, shape[1]])
+    ax.invert_yaxis()
+    plt.show()
