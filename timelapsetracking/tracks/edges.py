@@ -49,8 +49,16 @@ def add_edges(
             continue
         centroids_prev = df_prev.filter(cols_zyx).values
         centroids_curr = df_curr.filter(cols_zyx).values
+        volumes_prev, volumes_curr = None, None
+        if 'volume' in df_curr.columns:
+            volumes_prev = df_prev['volume'].to_numpy()
+            volumes_curr = df_curr['volume'].to_numpy()
         edges = find_correspondances(
-            centroids_prev, centroids_curr, **kwargs
+            centroids_a=centroids_prev,
+            centroids_b=centroids_curr,
+            volumes_a=volumes_prev,
+            volumes_b=volumes_curr,
+            **kwargs
         )
         for edge_from, edge_to in edges:
             if edge_from is None or edge_to is None:

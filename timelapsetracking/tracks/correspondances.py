@@ -18,6 +18,21 @@ def _calc_dist(
     return (((pos_a - pos_b)**2).sum(axis=axis_sum))**0.5
 
 
+def _similar_pairs(vec: np.ndarray, threshold: float):
+    """Returns pairs of indices of input vector where values are similar
+    within threshold.
+
+    """
+    maxes = np.maximum(vec[:, np.newaxis], vec[np.newaxis, ])
+    diffs = vec[:, np.newaxis] - vec[np.newaxis, ]
+    ndiffs = np.absolute(diffs)/maxes  # error relative to max
+    return np.tril(ndiffs < threshold, -1)
+
+
+def _calc_constraints(edges: Sequence[List]):
+    pass
+
+
 def _calc_pos_edges(
         centroids_a: np.ndarray,
         centroids_b: np.ndarray,
@@ -25,6 +40,8 @@ def _calc_pos_edges(
         allow_splits: bool,
         cost_add: float,
         cost_delete: float,
+        volumes_a: Optional[np.ndarray] = None,
+        volumes_b: Optional[np.ndarray] = None,
 ) -> Tuple[Sequence[List], Sequence[float], Sequence[List], Sequence[List]]:
     """Find potential linkages between sets of centroids.
 
@@ -46,6 +63,8 @@ def _calc_pos_edges(
         Cost of object creation.
     cost_delete
         Cost of object deletion.
+    volumes_a
+    volumes_b
 
     Returns
     -------
@@ -63,6 +82,8 @@ def _calc_pos_edges(
         tree_a = KDTree(centroids_a)
         tree_b = KDTree(centroids_b)
         neighbors = tree_a.query_ball_tree(tree_b, thresh_dist)
+    assert volumes_a is None or volumes_a.shape[0] == centroids_a.shape[0]
+    assert volumes_b is None or volumes_b.shape[0] == centroids_b.shape[0]
     pos_edges = []
     indices_left = [[] for _ in range(len(centroids_a))]
     indices_right = [[] for _ in range(len(centroids_b))]
@@ -91,7 +112,12 @@ def _calc_pos_edges(
             ndiffs = np.absolute(diffs)/maxes  # error relative to max
             angles = displacements.dot(displacements.T)
             # TODO: make thresholds function parameters
-            mask = np.logical_and(ndiffs < 0.7, np.tril(angles, -1) < -0.85)
+            masks = []
+            masks.append(np.tril(ndiffs < 0.7, -1))
+            masks.append(np.tril(angles < -0.85, -1))
+            if volumes_b is not None:
+                masks.append(_similar_pairs(volumes_b[indices_b], 0.3))
+            mask = np.logical_and.reduce(masks)
             for indices_d in zip(*np.where(mask)):
                 ordered = (
                     indices_d if indices_d[0] < indices_d[1] else
@@ -125,6 +151,8 @@ def find_correspondances(
         allow_splits: bool = True,
         cost_add: Optional[float] = None,
         cost_delete: Optional[float] = None,
+        volumes_a: Optional[np.ndarray] = None,
+        volumes_b: Optional[np.ndarray] = None,
 ):
     """Find correspondances from a to b using centroids.
 
@@ -144,6 +172,8 @@ def find_correspondances(
         Cost of object creation.
     cost_delete
         Cost of object deletion.
+    volumes_a
+    volumes_b
 
     """
     if centroids_a.ndim != 2 or centroids_b.ndim != 2:
@@ -167,6 +197,8 @@ def find_correspondances(
         allow_splits=allow_splits,
         cost_add=cost_add,
         cost_delete=cost_delete,
+        volumes_a=volumes_a,
+        volumes_b=volumes_b,
     )
     if len(pos_edges) == 0:
         return []
