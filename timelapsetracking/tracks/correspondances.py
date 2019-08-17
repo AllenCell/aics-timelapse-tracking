@@ -1,21 +1,15 @@
+from collections import defaultdict
+from typing import List, Sequence, Tuple, Optional
 import logging
-
-from typing import List, Sequence, Tuple, Union, Optional
 
 from scipy.optimize import linprog
 from scipy.spatial import KDTree
 import numpy as np
 
+from timelapsetracking.metrics import calc_dist
+
 
 logger = logging.getLogger(__name__)
-
-
-def _calc_dist(
-        pos_a: np.ndarray, pos_b: np.ndarray
-) -> Union[float, np.ndarray]:
-    """Calculates the Euclidean distance between points."""
-    axis_sum = 0 if (pos_a.ndim == pos_b.ndim == 1) else 1
-    return (((pos_a - pos_b)**2).sum(axis=axis_sum))**0.5
 
 
 def _similar_pairs(vec: np.ndarray, threshold: float):
@@ -29,8 +23,34 @@ def _similar_pairs(vec: np.ndarray, threshold: float):
     return np.tril(ndiffs < threshold, -1)
 
 
-def _calc_constraints(edges: Sequence[List]):
-    pass
+def _calc_edge_groups(edges: List[Tuple]) -> List[List[int]]:
+    """Calculate groups of edge indices that correspond to the same object.
+
+    Parameters
+    ----------
+    edges
+        List of proposed linkages between groups.
+
+    Returns
+    -------
+    List[List[int]]
+        List of edge groups.
+
+    """
+    constraints_a = defaultdict(list)
+    constraints_b = defaultdict(list)
+    for idx_e, (idx_a, idx_b) in enumerate(edges):
+        if idx_a is not None:
+            constraints_a[idx_a].append(idx_e)
+        if isinstance(idx_b, int):
+            constraints_b[idx_b].append(idx_e)
+        elif isinstance(idx_b, tuple):
+            constraints_b[idx_b[0]].append(idx_e)
+            constraints_b[idx_b[1]].append(idx_e)
+    return (
+        [c for c in constraints_a.values()]
+        + [c for c in constraints_b.values()]
+    )
 
 
 def _calc_pos_edges(
@@ -94,7 +114,7 @@ def _calc_pos_edges(
             indices_left[idx_a].append(idx_e)
             if idx_b is not None:
                 indices_right[idx_b].append(idx_e)
-                cost = _calc_dist(tree_a.data[idx_a], tree_b.data[idx_b])
+                cost = calc_dist(tree_a.data[idx_a], tree_b.data[idx_b])
             else:
                 cost = cost_delete
             pos_edges.append((idx_a, idx_b))
@@ -124,7 +144,7 @@ def _calc_pos_edges(
                     indices_d[1], indices_d[0]
                 )
                 pair = (indices_b[ordered[0]], indices_b[ordered[1]])
-                cost_split = _calc_dist(
+                cost_split = calc_dist(
                     tree_a.data[idx_a], tree_b.data[pair, ]
                 ).sum()
                 idx_e = len(pos_edges)
@@ -202,8 +222,9 @@ def find_correspondances(
     )
     if len(pos_edges) == 0:
         return []
+    edge_groups = _calc_edge_groups(pos_edges)
     A_eq = []
-    for indices in indices_left + indices_right:
+    for indices in edge_groups:
         constraint = np.zeros(len(pos_edges), dtype=np.int)
         constraint[indices] = 1
         A_eq.append(constraint)
