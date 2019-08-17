@@ -49,8 +49,8 @@ def _track_overlap(
 
 
 def target_effectiveness(
-        df_targets: pd.DataFrame,
         df_tracks: pd.DataFrame,
+        df_targets: pd.DataFrame,
         thresh_dist: float,
 ):
     """Computes the target effectiveness.
