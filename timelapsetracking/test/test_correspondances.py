@@ -180,7 +180,7 @@ def test_mitosis():
     # Add volume information. Mitosis cases should no longer be possible since
     # since the volumes are too non-similar.
     volumes_b = np.array([2**i for i in range(len(centroids_1))], dtype=float)
-    edges, costs, left, right = corr._calc_pos_edges(
+    edges, costs = corr._calc_pos_edges(
         centroids_a=centroids_0,
         centroids_b=centroids_1,
         allow_splits=True,
@@ -195,7 +195,7 @@ def test_mitosis():
     # Change object 0 and 4 volumes to be similar. Mitosis cases should be
     # possible again.
     volumes_b[0] = volumes_b[4] * 1.2
-    edges, costs, left, right = corr._calc_pos_edges(
+    edges, costs = corr._calc_pos_edges(
         centroids_a=centroids_0,
         centroids_b=centroids_1,
         allow_splits=True,

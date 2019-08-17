@@ -62,7 +62,7 @@ def _calc_pos_edges(
         cost_delete: float,
         volumes_a: Optional[np.ndarray] = None,
         volumes_b: Optional[np.ndarray] = None,
-) -> Tuple[Sequence[List], Sequence[float], Sequence[List], Sequence[List]]:
+) -> Tuple[Sequence[List], Sequence[float]]:
     """Find potential linkages between sets of centroids.
 
     Potential linkages are given a cost based on the Euclidean distance between
@@ -84,12 +84,14 @@ def _calc_pos_edges(
     cost_delete
         Cost of object deletion.
     volumes_a
+        Volumes for objects in first group.
     volumes_b
+        Volumes for objects in second group.
 
     Returns
     -------
-    Tuple[Sequence[List], Sequence[float], Sequence[List], Sequence[List]]
-        pos_edges, costs, indices_left, indices_right
+    Tuple[Sequence[List], Sequence[float]]
+        pos_edges, costs
 
     """
     if len(centroids_a) == 0 and len(centroids_b) == 0:
@@ -105,15 +107,10 @@ def _calc_pos_edges(
     assert volumes_a is None or volumes_a.shape[0] == centroids_a.shape[0]
     assert volumes_b is None or volumes_b.shape[0] == centroids_b.shape[0]
     pos_edges = []
-    indices_left = [[] for _ in range(len(centroids_a))]
-    indices_right = [[] for _ in range(len(centroids_b))]
     costs = []
     for idx_a, indices_b in enumerate(neighbors):
         for idx_b in indices_b + [None]:  # None indicates "delete" vertex
-            idx_e = len(pos_edges)
-            indices_left[idx_a].append(idx_e)
             if idx_b is not None:
-                indices_right[idx_b].append(idx_e)
                 cost = calc_dist(tree_a.data[idx_a], tree_b.data[idx_b])
             else:
                 cost = cost_delete
@@ -147,20 +144,14 @@ def _calc_pos_edges(
                 cost_split = calc_dist(
                     tree_a.data[idx_a], tree_b.data[pair, ]
                 ).sum()
-                idx_e = len(pos_edges)
-                indices_left[idx_a].append(idx_e)
-                indices_right[pair[0]].append(idx_e)
-                indices_right[pair[1]].append(idx_e)
                 pos_edges.append((idx_a, pair))
                 costs.append(cost_split)
 
     # Add in "add" edges
     for idx_b in range(len(centroids_b)):
-        idx_e = len(pos_edges)
-        indices_right[idx_b].append(idx_e)
         pos_edges.append((None, idx_b))
         costs.append(cost_add)
-    return pos_edges, costs, indices_left, indices_right
+    return pos_edges, costs
 
 
 def find_correspondances(
@@ -210,7 +201,7 @@ def find_correspondances(
         raise ValueError('Method first must be "simplex" or "interior-point"')
     cost_add = cost_add or thresh_dist*1.1
     cost_delete = cost_delete or thresh_dist*1.1
-    pos_edges, costs, indices_left, indices_right = _calc_pos_edges(
+    pos_edges, costs = _calc_pos_edges(
         centroids_a=centroids_a,
         centroids_b=centroids_b,
         thresh_dist=thresh_dist,
@@ -223,6 +214,7 @@ def find_correspondances(
     if len(pos_edges) == 0:
         return []
     edge_groups = _calc_edge_groups(pos_edges)
+    assert len(edge_groups) == (len(centroids_a) + len(centroids_b))
     A_eq = []
     for indices in edge_groups:
         constraint = np.zeros(len(pos_edges), dtype=np.int)
