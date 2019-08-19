@@ -104,6 +104,19 @@ def test_simple():
     )
 
 
+def test__calc_pos_edges():
+    """Test edge cases for_calc_pos_edges."""
+    edges, costs = corr._calc_pos_edges(
+        centroids_a=np.random.randint(20, size=(0, 3)),
+        centroids_b=np.random.randint(20, size=(0, 3)),
+        thresh_dist=32,
+        allow_splits=False,
+        cost_add=40,
+        cost_delete=40,
+    )
+    assert len(edges) == len(costs) == 0
+
+
 def test_delete():
     """Test correspondance when some centroids are deleted."""
     rng = np.random.RandomState(666)

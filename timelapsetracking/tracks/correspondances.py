@@ -95,7 +95,7 @@ def _calc_pos_edges(
 
     """
     if len(centroids_a) == 0 and len(centroids_b) == 0:
-        return [], [], [], []
+        return [], []
     elif len(centroids_a) > 0 and len(centroids_b) == 0:
         neighbors = [[] for _ in range(len(centroids_a))]
     elif len(centroids_a) == 0 and len(centroids_b) > 0:
@@ -128,7 +128,6 @@ def _calc_pos_edges(
             diffs = mags[:, np.newaxis] - mags[np.newaxis, ]
             ndiffs = np.absolute(diffs)/maxes  # error relative to max
             angles = displacements.dot(displacements.T)
-            # TODO: make thresholds function parameters
             masks = []
             masks.append(np.tril(ndiffs < 0.7, -1))
             masks.append(np.tril(angles < -0.85, -1))
@@ -184,7 +183,9 @@ def find_correspondances(
     cost_delete
         Cost of object deletion.
     volumes_a
+        Volumes for objects in first group.
     volumes_b
+        Volumes for objects in second group.
 
     """
     if centroids_a.ndim != 2 or centroids_b.ndim != 2:
