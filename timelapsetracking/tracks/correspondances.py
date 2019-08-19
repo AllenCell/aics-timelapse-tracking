@@ -94,12 +94,8 @@ def _calc_pos_edges(
         pos_edges, costs
 
     """
-    if len(centroids_a) == 0 and len(centroids_b) == 0:
-        return [], []
-    elif len(centroids_a) > 0 and len(centroids_b) == 0:
+    if len(centroids_a) == 0 or len(centroids_b) == 0:
         neighbors = [[] for _ in range(len(centroids_a))]
-    elif len(centroids_a) == 0 and len(centroids_b) > 0:
-        neighbors = []
     else:  # len(centroids_a) > 0 and len(centroids_b) > 0
         tree_a = KDTree(centroids_a)
         tree_b = KDTree(centroids_b)
