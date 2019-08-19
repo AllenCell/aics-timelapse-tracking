@@ -3,7 +3,7 @@ from typing import List, Optional, Tuple
 import numpy as np
 import numpy.testing as npt
 
-from timelapsetracking.tracks.correspondances import find_correspondances
+from timelapsetracking.tracks import correspondances as corr
 
 
 Pairing = Tuple[Optional[int], Optional[int]]
@@ -66,9 +66,9 @@ def _test_matches(
     max_count = max(len(centroids_0), len(centroids_1))
     for idx_t in range(4):
         if idx_t > 0:
-            rng.shuffle(centroids_0)
-            rng.shuffle(centroids_1)
-        matching = find_correspondances(centroids_0, centroids_1)
+            centroids_0 = rng.permutation(centroids_0)
+            centroids_1 = rng.permutation(centroids_1)
+        matching = corr.find_correspondances(centroids_0, centroids_1)
         assert min_count <= len(matching) <= max_count
         matching_as_centroids = []
         for idx_0, indices_1 in matching:
@@ -102,6 +102,19 @@ def test_simple():
     _test_matches(
         centroids_0, centroids_1, [(0, 0), (1, 1), (2, 2), (3, 3)], rng
     )
+
+
+def test__calc_pos_edges():
+    """Test edge cases for_calc_pos_edges."""
+    edges, costs = corr._calc_pos_edges(
+        centroids_a=np.random.randint(20, size=(0, 3)),
+        centroids_b=np.random.randint(20, size=(0, 3)),
+        thresh_dist=32,
+        allow_splits=False,
+        cost_add=40,
+        cost_delete=40,
+    )
+    assert len(edges) == len(costs) == 0
 
 
 def test_delete():
@@ -151,15 +164,58 @@ def test_mitosis():
     """Test mitosis case."""
     rng = np.random.RandomState(666)
     centroids_0, centroids_1 = _get_centroid_sets(rng)
-    # Create additional child for objects 1 and 2 of first group
-    children = []
-    for cen in centroids_0[[1, 2], :]:
-        children.append([coord + rng.normal(scale=4) for coord in cen])
-    centroids_1 = np.concatenate((centroids_1, children))
-    centroids_1 = np.concatenate((centroids_1, [[88, 66], [0, 128]]))
+    # Create additional child for objects 0 and 3. For object 0, second child
+    # compatible with mitosis (movement vector of first child rotated 180). For
+    # object 3, second child incompabile with mitosis (movement vector of first
+    # child rotated by 90).
+    child_mito = (
+        centroids_0[0, :]
+        + (
+            np.array([[-1.1, 0], [0, -1.1]])
+            .dot(centroids_1[0, :] - centroids_0[0, :])
+        )
+    )
+    child_non_mito = (
+        centroids_0[3, :]
+        + (
+            np.array([[0, -1.1], [1.1, 0]])
+            .dot(centroids_1[3, :] - centroids_0[3, :])
+        )
+    )
+    centroids_1 = np.concatenate((centroids_1, [child_mito, child_non_mito]))
     _test_matches(
         centroids_0,
         centroids_1,
-        [(0, 0), (1, (1, 4)), (2, (2, 5)), (3, 3), (None, 6), (None, 7)],
+        [(0, (0, 4)), (1, 1), (2, 2), (3, 3), (None, 5)],
         rng,
     )
+
+    # Add volume information. Mitosis cases should no longer be possible since
+    # since the volumes are too non-similar.
+    volumes_b = np.array([2**i for i in range(len(centroids_1))], dtype=float)
+    edges, costs = corr._calc_pos_edges(
+        centroids_a=centroids_0,
+        centroids_b=centroids_1,
+        allow_splits=True,
+        thresh_dist=32.,
+        cost_add=40.,
+        cost_delete=40.,
+        volumes_b=volumes_b,
+    )
+    assert (0, (0, 4)) not in edges
+    assert (3, (3, 5)) not in edges
+
+    # Change object 0 and 4 volumes to be similar. Mitosis cases should be
+    # possible again.
+    volumes_b[0] = volumes_b[4] * 1.2
+    edges, costs = corr._calc_pos_edges(
+        centroids_a=centroids_0,
+        centroids_b=centroids_1,
+        allow_splits=True,
+        thresh_dist=32.,
+        cost_add=40.,
+        cost_delete=40.,
+        volumes_b=volumes_b,
+    )
+    assert (0, (0, 4)) in edges
+    assert (3, (3, 5)) not in edges
