@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 def img_to_nodes(
-        img: np.ndarray, fov: List[Dict], meta: Optional[Dict] = None
+        img: np.ndarray, meta: Optional[Dict] = None
 ) -> List[Dict]:
     """Converts image of object labels to graph nodes.
 
@@ -49,15 +49,20 @@ def img_to_nodes(
     if meta is None:
         meta = {}
 
+    labels = np.unique(img)
+    if labels[0] == 0:
+        labels = labels[1:]
     nodes = []
-    for index in fov.index:
+    for label in labels:
+        print('Label [{0}]'.format(label))
         node = {}
-        node['volume'] = fov.Area[index]
-        node['label_img'] = fov.Label[index]
-        rcm = eval(fov.Centroid[index])
-        # import pdb; pdb.set_trace()
+        mask = img == label
+        coords = np.where(mask)
+        node['volume'] = mask.sum()
+        node['label_img'] = label
+        # Iterate over 'yx' for 2d, 'zyx' for 3d
         for idx_d, dim in enumerate('zyx'[-img.ndim:]):
-            node[f'centroid_{dim}'] = rcm[idx_d]
+            node[f'centroid_{dim}'] = coords[idx_d].mean()
         node.update(meta)
         nodes.append(node)
     return nodes
@@ -66,10 +71,7 @@ def img_to_nodes(
 def _img_to_nodes_wrapper(meta: Dict) -> List[Dict]:
     """Wrapper for 'map' method of multiprocessing.Pool."""
     logger.info(f'Processing: {meta["path_tif"]}')
-    print(meta['path_tif'])
-    img = tifffile.imread(meta['path_tif'])
-    fov = pd.read_csv(meta['path_tif'].replace('.tiff','_region_props.csv'), index_col=0)
-    return img_to_nodes(img, fov, meta=meta)
+    return img_to_nodes(tifffile.imread(meta['path_tif']), meta=meta)
 
 
 @report_run_time
@@ -97,12 +99,8 @@ def dir_to_nodes(
         {'index_sequence': idx_s, 'path_tif': path}
         for idx_s, path in enumerate(paths_img)
     ]
-
-    # _img_to_nodes_wrapper(metas[0])
-
     with Pool(min(num_processes, os.cpu_count())) as pool:
         nodes_per_img = pool.map(_img_to_nodes_wrapper, metas)
-
     nodes = []
     for per_img in nodes_per_img:
         nodes.extend(per_img)
