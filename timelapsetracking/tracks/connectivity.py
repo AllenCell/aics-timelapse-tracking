@@ -29,12 +29,19 @@ def graph_valid(out_lists: NodetoEdgesMap) -> bool:
         being_explored[v] = True
         # Check for too many in or out edges
         if len(in_lists[v]) > 1 or len(out_lists[v]) > 2:
+            print('in-out error')
+            print(v)
+            print(str(in_lists[v]) + ' ' + str(out_lists[v]))
             return False
         for child in out_lists[v]:
+            # print(child)
             if child not in being_explored:
                 if not _valid_helper(child):
+                    print('child not valid helper')
+                    print(child)
                     return False
             elif being_explored[child]:  # Cycle detected
+                # print('being explored error')
                 return False
         being_explored[v] = False
         return True
@@ -48,6 +55,9 @@ def graph_valid(out_lists: NodetoEdgesMap) -> bool:
     for v in out_lists:
         if v not in being_explored:
             if not _valid_helper(v):
+                print(f'node {v} failed')
+                print(in_lists[v])
+                print(out_lists[v])
                 return False
     return True
 

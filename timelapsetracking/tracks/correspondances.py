@@ -23,7 +23,11 @@ def _similar_pairs(vec: np.ndarray, threshold: float):
     return np.tril(ndiffs < threshold, -1)
 
 
-def _calc_edge_groups(edges: List[Tuple]) -> List[List[int]]:
+def _calc_edge_groups(edges: List[Tuple],
+                    volumes_a: np.ndarray,
+                    volumes_b: np.ndarray,
+                    size_threshold: float = 0.8,
+) -> List[List[int]]:
     """Calculate groups of edge indices that correspond to the same object.
 
     Parameters
@@ -39,17 +43,45 @@ def _calc_edge_groups(edges: List[Tuple]) -> List[List[int]]:
     """
     constraints_a = defaultdict(list)
     constraints_b = defaultdict(list)
+    weights_a = defaultdict(list)
+    weights_b = defaultdict(list)
     for idx_e, (idx_a, idx_b) in enumerate(edges):
+        w = 1
+        if idx_a is not None and idx_b is not None:
+            if isinstance(idx_b, int):
+                w = volumes_a[idx_a]/volumes_b[idx_b]
+            elif isinstance(idx_b, tuple):
+                w = volumes_a[idx_a]/(volumes_b[idx_b[0]]+volumes_b[idx_b[1]])
         if idx_a is not None:
             constraints_a[idx_a].append(idx_e)
+            if w < size_threshold:
+                weights_a[idx_a].append(1/w)
+            else:
+                weights_a[idx_a].append(1)
         if isinstance(idx_b, int):
             constraints_b[idx_b].append(idx_e)
+            if w > 1/size_threshold:
+                weights_b[idx_b].append(w)
+            else:
+                weights_b[idx_b].append(1)
         elif isinstance(idx_b, tuple):
             constraints_b[idx_b[0]].append(idx_e)
             constraints_b[idx_b[1]].append(idx_e)
+            if w > 1/size_threshold:
+                weights_b[idx_b[0]].append(w)
+                weights_b[idx_b[1]].append(w)
+            else:
+                weights_b[idx_b[0]].append(1)
+                weights_b[idx_b[1]].append(1)
+
+    # import pdb
+    # pdb.set_trace()
+    
     return (
-        [c for c in constraints_a.values()]
-        + [c for c in constraints_b.values()]
+        ([c for c in constraints_a.values()]
+        + [c for c in constraints_b.values()],
+        [w for w in weights_a.values()]
+        + [w for w in weights_b.values()])
     )
 
 
@@ -109,7 +141,7 @@ def _calc_pos_edges(
             if idx_b is not None:
                 cost = calc_dist(tree_a.data[idx_a], tree_b.data[idx_b])
             else:
-                cost = cost_delete
+                cost = cost_delete[idx_a]
             pos_edges.append((idx_a, idx_b))
             costs.append(cost)
         if allow_splits and len(indices_b) > 1:
@@ -142,10 +174,12 @@ def _calc_pos_edges(
                 pos_edges.append((idx_a, pair))
                 costs.append(cost_split)
 
-    # Add in "add" edges
+    # # Add in "add" edges
+    # import pdb
+    # pdb.set_trace()
     for idx_b in range(len(centroids_b)):
         pos_edges.append((None, idx_b))
-        costs.append(cost_add)
+        costs.append(cost_add[idx_b])
     return pos_edges, costs
 
 
@@ -196,8 +230,9 @@ def find_correspondances(
         methods = ['interior-point', 'simplex']
     else:
         raise ValueError('Method first must be "simplex" or "interior-point"')
-    cost_add = cost_add or thresh_dist*1.1
-    cost_delete = cost_delete or thresh_dist*1.1
+
+    # cost_add = cost_add or thresh_dist*1.1
+    # cost_delete = cost_delete or thresh_dist*1.1
     pos_edges, costs = _calc_pos_edges(
         centroids_a=centroids_a,
         centroids_b=centroids_b,
@@ -210,13 +245,17 @@ def find_correspondances(
     )
     if len(pos_edges) == 0:
         return []
-    edge_groups = _calc_edge_groups(pos_edges)
+    (edge_groups, edge_weights) = _calc_edge_groups(pos_edges, volumes_a, volumes_b)
     assert len(edge_groups) == (len(centroids_a) + len(centroids_b))
+    assert len(edge_weights) == (len(centroids_a) + len(centroids_b))
     A_eq = []
-    for indices in edge_groups:
-        constraint = np.zeros(len(pos_edges), dtype=np.int)
-        constraint[indices] = 1
+    
+    for _, (indices, weights) in enumerate(zip(edge_groups, edge_weights)):
+        constraint = np.zeros(len(pos_edges), dtype=np.float)
+        for _, (index, weight) in enumerate(zip(indices, weights)):
+            constraint[index] = weight
         A_eq.append(constraint)
+
     b_eq = [1]*len(A_eq)
     for method in methods:
         result = linprog(
@@ -226,6 +265,7 @@ def find_correspondances(
             bounds=(0., 1.),
             method=method,
         )
+
         if result.success:
             break
         logger.info(f'Method {method} failed!')
@@ -234,4 +274,63 @@ def find_correspondances(
         raise ValueError
     indices = np.where(np.round(result.x))[0]
     edges = [pos_edges[idx] for idx in indices]
+
+    # import pdb
+    # pdb.set_trace()
+   
+    from itertools import combinations
+    for i in range(2):
+        for (edge_1, edge_2) in combinations(edges, 2):
+            if bool(set(edge_1[1:]) & set(edge_2[1:])) and edge_1[0] != edge_2[0]:
+                
+                # import pdb
+                # pdb.set_trace() 
+
+                if edge_1[-1] is None:
+                    continue
+
+                print('merge found')
+                print(str(edge_1) + ' ' + str(edge_2))
+
+                if edge_1[0] is None:
+                    try:
+                        edges.remove(edge_1)
+                        continue
+                    except:
+                        continue
+
+                elif edge_2[0] is None:
+                    try:
+                        edges.remove(edge_2)
+                        continue
+                    except:
+                        continue
+
+
+                idx_1 = pos_edges.index(edge_1)
+                idx_2 = pos_edges.index(edge_2)
+
+                cost_1 = costs[idx_1]
+                cost_2 = costs[idx_2]
+
+                if cost_1 >= cost_2:
+                    try:
+                        edges.remove(edge_1)
+                        edges.append((edge_1[0],None))
+                        print('Removed edge 1')
+                    except:
+                        continue
+                else:
+                    try:
+                        edges.remove(edge_2)
+                        edges.append((edge_2[0],None))
+                        print('Removed edge 2')
+                    except:
+                        continue
+
+            
+
+    # import pdb
+    # pdb.set_trace()
+
     return edges

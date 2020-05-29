@@ -49,17 +49,46 @@ def img_to_nodes(
     if meta is None:
         meta = {}
 
+    field_shape = np.array(img.shape)
     nodes = []
+    pairs_done = []
     for index in fov.index:
         node = {}
         node['volume'] = fov.Area[index]
         node['label_img'] = fov.Label[index]
         rcm = eval(fov.Centroid[index])
-        # import pdb; pdb.set_trace()
+        edge_distance = np.amax(field_shape)
         for idx_d, dim in enumerate('zyx'[-img.ndim:]):
             node[f'centroid_{dim}'] = rcm[idx_d]
+            if dim != 'z':
+                edge_distance = np.amin([edge_distance, rcm[idx_d], field_shape[idx_d]-rcm[idx_d]])
+        node['edge_distance'] = edge_distance
         node.update(meta)
         nodes.append(node)
+
+        if fov.Pair[index] != 0:
+            pair_node = {}
+            idx_partner = fov.index[fov['Label']==fov.Pair[index]].tolist()[0]
+            if idx_partner in pairs_done:
+                continue
+            else:
+                pairs_done.append(index)
+                pairs_done.append(idx_partner)
+            pair_node['volume'] = node['volume'] + fov.Area[idx_partner]
+            pair_labels = [node['label_img'], fov.Label[idx_partner]]
+            pair_labels.sort()
+            pair_node['label_img'] = pair_labels
+            rcm_p = eval(fov.Centroid[idx_partner])
+            edge_distance = np.amax(field_shape)
+            for idx_d, dim in enumerate('zyx'[-img.ndim:]):
+                pair_node[f'centroid_{dim}'] = (rcm_p[idx_d] + node[f'centroid_{dim}'])/2
+                if dim != 'z':
+                    edge_distance = np.amin([edge_distance, pair_node[f'centroid_{dim}'], field_shape[idx_d]-pair_node[f'centroid_{dim}']])
+            pair_node['edge_distance'] = edge_distance
+            pair_node.update(meta)
+            nodes.append(pair_node)
+
+        
     return nodes
 
 
@@ -68,7 +97,7 @@ def _img_to_nodes_wrapper(meta: Dict) -> List[Dict]:
     logger.info(f'Processing: {meta["path_tif"]}')
     print(meta['path_tif'])
     img = tifffile.imread(meta['path_tif'])
-    fov = pd.read_csv(meta['path_tif'].replace('.tiff','_region_props.csv'), index_col=0)
+    fov = pd.read_csv(meta['path_tif'].replace('.tiff','.tif').replace('.tif','_region_props.csv'))#, index_col=0)
     return img_to_nodes(img, fov, meta=meta)
 
 
