@@ -50,12 +50,14 @@ def img_to_nodes(
         meta = {}
 
     field_shape = np.array(img.shape)
+    origin = np.zeros_like(field_shape)
     nodes = []
     pairs_done = []
     for index in fov.index:
         node = {}
         node['volume'] = fov.Area[index]
         node['label_img'] = fov.Label[index]
+        node['is_pair'] = False
 
         rcm = eval(fov.Centroid[index])
         edge_distance = np.amax(field_shape)
@@ -70,14 +72,11 @@ def img_to_nodes(
         # check if cell segmentation is touching boundary and label as edge cell
         obj_idxs = None
         obj_idxs = np.argwhere(img==node['label_img'])
-        origin = np.zeros_like(field_shape)
-        is_edge = False
-        for idx in obj_idxs:
-            if np.any(np.logical_or(np.equal(idx, origin),
-                                    np.equal(idx, field_shape-1))
-                    ):
-                is_edge = True
-                break
+        
+        min_coors = np.min(obj_idxs, axis=0)
+        max_coors = np.max(obj_idxs, axis=0)
+        is_edge =  np.any(np.logical_or(np.equal(min_coors, origin),
+                                np.equal(max_coors, field_shape-1)))
 
         node['edge_cell'] = is_edge
 
@@ -96,6 +95,7 @@ def img_to_nodes(
             pair_labels = [node['label_img'], fov.Label[idx_partner]]
             pair_labels.sort()
             pair_node['label_img'] = pair_labels
+            pair_node['is_pair'] = True
 
             obj_idxs = None
             for label in pair_labels:
@@ -104,14 +104,11 @@ def img_to_nodes(
                 else:
                     obj_idxs = np.concatenate((obj_idxs, np.argwhere(img==label)),
                                             axis=0)
-            origin = np.zeros_like(field_shape)
-            is_edge = False
-            for idx in obj_idxs:
-                if np.any(np.logical_or(np.equal(idx, origin),
-                                        np.equal(idx, field_shape-1))
-                        ):
-                    is_edge = True
-                    break
+
+            min_coors = np.min(obj_idxs, axis=0)
+            max_coors = np.max(obj_idxs, axis=0)
+            is_edge =  np.any(np.logical_or(np.equal(min_coors, origin),
+                                np.equal(max_coors, field_shape-1)))
             
             pair_node['edge_cell'] = is_edge
 
@@ -172,4 +169,9 @@ def dir_to_nodes(
     nodes = []
     for per_img in nodes_per_img:
         nodes.extend(per_img)
-    return pd.DataFrame(nodes).rename_axis('node_id', axis=0)
+    
+    df = pd.DataFrame(nodes)
+    df = pd.concat([df[[not i for i in df.is_pair.values]],
+                    df[df.is_pair.values]]).reset_index(drop=True).rename_axis('node_id', axis=0)
+    # df = df.drop(columns=['is_pair'])
+    return df

@@ -46,6 +46,7 @@ def add_edges(
     df_edges['volume'] = df['volume']
     df_edges['edge_distance'] = df['edge_distance']
     df_edges['edge_cell'] = df['edge_cell']
+    df_edges['is_pair'] = df['is_pair']
     for col in cols_zyx:
         df_edges[col] = df[col]
     index_vals = df[col_index_sequence].unique()
@@ -87,12 +88,12 @@ def add_edges(
 
             # split edge pointing to pair node
             pairs = [index for index, row in df_curr.iterrows() 
-                        if isinstance(row['label_img'], list)] 
+                        if row['is_pair']] 
             df_curr_not_pair = df_curr.copy()
             for idx in pairs:
                 df_curr_not_pair['label_img'][idx] = []
 
-            if isinstance(df_edges.loc[idxs_curr, 'label_img'].values[0], list):
+            if df_edges.loc[idxs_curr, 'is_pair'].values:
                 child_list = []
                 for label in df_edges.loc[idxs_curr,'label_img'].values[0]:
                     child_list.append(df_curr_not_pair.index[df_curr_not_pair['label_img']==label].values[0])
@@ -103,7 +104,7 @@ def add_edges(
                 df_edges.loc[idx_curr, 'in_list'] = f'[{idx_prev}]'
         # do not include pair nodes in list of previous nodes
         keep_idxs = [index for index, row in df_curr.iterrows() 
-                        if not isinstance(row['label_img'], list)]
+                        if not row['is_pair']]
         df_prev = df_curr.loc[keep_idxs]
         
     # attempt to bridge non-edge cells with missing graph edges
@@ -111,12 +112,17 @@ def add_edges(
 
     # remove pair nodes in cuur from full dataframe
     remove_idx = [index for index, row in df_edges.iterrows() 
-                    if isinstance(row['label_img'], list)]
+                    if row['is_pair']]
     
     df = df.drop(remove_idx)
 
 
-    df_edges = df_edges.drop(columns=['label_img', 'index_sequence', 'volume', 'edge_distance', 'edge_cell'])
+    df_edges = df_edges.drop(columns=['label_img', 
+                                        'index_sequence', 
+                                        'volume', 
+                                        'edge_distance', 
+                                        'edge_cell', 
+                                        'is_pair'])
     df_edges = df_edges.drop(columns=cols_zyx)
     return df.join(df_edges)
 
@@ -197,12 +203,12 @@ def bridge_edges(
 
             # split edge pointing to pair node
             pairs = [index for index, row in df_curr.iterrows() 
-                        if isinstance(row['label_img'], list)] 
+                        if row['is_pair']] 
             df_curr_not_pair = df_curr.copy()
             for idx in pairs:
                 df_curr_not_pair['label_img'][idx] = []
 
-            if isinstance(df_edges.loc[idxs_curr, 'label_img'].values[0], list):
+            if df_edges.loc[idxs_curr, 'is_pair'].values:
                 child_list = []
                 for label in df_edges.loc[idxs_curr,'label_img'].values[0]:
                     child_list.append(df_curr_not_pair.index[df_curr_not_pair['label_img']==label].values[0])
