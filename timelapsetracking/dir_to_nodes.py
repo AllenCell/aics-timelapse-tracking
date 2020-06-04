@@ -56,13 +56,31 @@ def img_to_nodes(
         node = {}
         node['volume'] = fov.Area[index]
         node['label_img'] = fov.Label[index]
+
         rcm = eval(fov.Centroid[index])
         edge_distance = np.amax(field_shape)
         for idx_d, dim in enumerate('zyx'[-img.ndim:]):
             node[f'centroid_{dim}'] = rcm[idx_d]
             if dim != 'z':
-                edge_distance = np.amin([edge_distance, rcm[idx_d], field_shape[idx_d]-rcm[idx_d]])
+                edge_distance = np.amin([edge_distance, 
+                                        rcm[idx_d], 
+                                        field_shape[idx_d]-rcm[idx_d]])
         node['edge_distance'] = edge_distance
+
+        # check if cell segmentation is touching boundary and label as edge cell
+        obj_idxs = None
+        obj_idxs = np.argwhere(img==node['label_img'])
+        origin = np.zeros_like(field_shape)
+        is_edge = False
+        for idx in obj_idxs:
+            if np.any(np.logical_or(np.equal(idx, origin),
+                                    np.equal(idx, field_shape-1))
+                    ):
+                is_edge = True
+                break
+
+        node['edge_cell'] = is_edge
+
         node.update(meta)
         nodes.append(node)
 
@@ -78,6 +96,25 @@ def img_to_nodes(
             pair_labels = [node['label_img'], fov.Label[idx_partner]]
             pair_labels.sort()
             pair_node['label_img'] = pair_labels
+
+            obj_idxs = None
+            for label in pair_labels:
+                if obj_idxs is None:
+                    obj_idxs = np.argwhere(img==label)
+                else:
+                    obj_idxs = np.concatenate((obj_idxs, np.argwhere(img==label)),
+                                            axis=0)
+            origin = np.zeros_like(field_shape)
+            is_edge = False
+            for idx in obj_idxs:
+                if np.any(np.logical_or(np.equal(idx, origin),
+                                        np.equal(idx, field_shape-1))
+                        ):
+                    is_edge = True
+                    break
+            
+            pair_node['edge_cell'] = is_edge
+
             rcm_p = eval(fov.Centroid[idx_partner])
             edge_distance = np.amax(field_shape)
             for idx_d, dim in enumerate('zyx'[-img.ndim:]):
