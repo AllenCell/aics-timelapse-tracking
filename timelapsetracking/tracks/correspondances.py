@@ -27,6 +27,7 @@ def _calc_edge_groups(edges: List[Tuple],
                     volumes_a: np.ndarray,
                     volumes_b: np.ndarray,
                     size_threshold: float = 0.8,
+                    weight_scaler: float = 3.0
 ) -> List[List[int]]:
     """Calculate groups of edge indices that correspond to the same object.
 
@@ -55,13 +56,13 @@ def _calc_edge_groups(edges: List[Tuple],
         if idx_a is not None:
             constraints_a[idx_a].append(idx_e)
             if w < size_threshold:
-                weights_a[idx_a].append(1/w)
+                weights_a[idx_a].append((1/w)**weight_scaler)
             else:
                 weights_a[idx_a].append(1)
         if isinstance(idx_b, int):
             constraints_b[idx_b].append(idx_e)
             if w > 1/size_threshold:
-                weights_b[idx_b].append(w)
+                weights_b[idx_b].append(w**weight_scaler)
             else:
                 weights_b[idx_b].append(1)
         elif isinstance(idx_b, tuple):
@@ -149,9 +150,14 @@ def _calc_pos_edges(
             # magnitudes of the displacement vectors. Two objects in the second
             # object group might be paired children if their displacement
             # vector angles are ~-180 apart and if the magnitudes are similar.
-            displacements = tree_b.data[indices_b] - tree_a.data[idx_a]
-            mags = np.sqrt(np.sum(displacements**2, axis=1))
+            displacements = (tree_b.data[indices_b] - tree_a.data[idx_a]).astype(np.float)
+            mags = np.sqrt(np.sum(displacements**2, axis=1)).astype(np.float)
+            # try:
             displacements /= mags[:, np.newaxis]
+            # except:
+            #     print('here')
+            #     print(displacements)
+            #     print(mags)
             maxes = np.maximum(mags[:, np.newaxis], mags[np.newaxis, ])
             diffs = mags[:, np.newaxis] - mags[np.newaxis, ]
             ndiffs = np.absolute(diffs)/maxes  # error relative to max
