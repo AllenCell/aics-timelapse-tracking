@@ -32,6 +32,11 @@ interactive_dev_deps = [
     # 'itkwidgets==0.12.2',
     # 'ipython==7.0.1',
     # 'ipywidgets==7.4.1'
+    'matplotlib',
+    'jupyter',
+    'itkwidgets',
+    'ipython',
+    'ipywidgets'
 ]
 all_deps = [*test_deps, *lint_deps, *interactive_dev_deps]
 

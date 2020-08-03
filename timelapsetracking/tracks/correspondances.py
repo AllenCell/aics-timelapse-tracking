@@ -26,8 +26,10 @@ def _similar_pairs(vec: np.ndarray, threshold: float):
 def _calc_edge_groups(edges: List[Tuple],
                     volumes_a: np.ndarray,
                     volumes_b: np.ndarray,
-                    size_threshold: float = 0.8,
-                    weight_scaler: float = 3.0
+                    has_pair_b: np.ndarray,
+                    size_threshold: float = 0.50,
+                    weight_scaler: float = 1.0,
+                    pair_scaler: float = 0.25
 ) -> List[List[int]]:
     """Calculate groups of edge indices that correspond to the same object.
 
@@ -46,8 +48,18 @@ def _calc_edge_groups(edges: List[Tuple],
     constraints_b = defaultdict(list)
     weights_a = defaultdict(list)
     weights_b = defaultdict(list)
+
+    pair_scales = np.ones_like(has_pair_b)
+    pair_scales[has_pair_b] = pair_scaler
+
     for idx_e, (idx_a, idx_b) in enumerate(edges):
         w = 1
+
+        if idx_b is not None:
+            scale = pair_scales[idx_b]
+        else:
+            scale = 1
+
         if idx_a is not None and idx_b is not None:
             if isinstance(idx_b, int):
                 w = volumes_a[idx_a]/volumes_b[idx_b]
@@ -56,24 +68,24 @@ def _calc_edge_groups(edges: List[Tuple],
         if idx_a is not None:
             constraints_a[idx_a].append(idx_e)
             if w < size_threshold:
-                weights_a[idx_a].append((1/w)**weight_scaler)
+                weights_a[idx_a].append((1/w*scale)**weight_scaler)
             else:
-                weights_a[idx_a].append(1)
+                weights_a[idx_a].append(1*scale)
         if isinstance(idx_b, int):
             constraints_b[idx_b].append(idx_e)
             if w > 1/size_threshold:
-                weights_b[idx_b].append(w**weight_scaler)
+                weights_b[idx_b].append((w*scale)**weight_scaler)
             else:
                 weights_b[idx_b].append(1)
         elif isinstance(idx_b, tuple):
             constraints_b[idx_b[0]].append(idx_e)
             constraints_b[idx_b[1]].append(idx_e)
             if w > 1/size_threshold:
-                weights_b[idx_b[0]].append(w)
-                weights_b[idx_b[1]].append(w)
+                weights_b[idx_b[0]].append(w*scale)
+                weights_b[idx_b[1]].append(w*scale)
             else:
-                weights_b[idx_b[0]].append(1)
-                weights_b[idx_b[1]].append(1)
+                weights_b[idx_b[0]].append(1*scale)
+                weights_b[idx_b[1]].append(1*scale)
 
     # import pdb
     # pdb.set_trace()
@@ -142,7 +154,7 @@ def _calc_pos_edges(
             if idx_b is not None:
                 cost = calc_dist(tree_a.data[idx_a], tree_b.data[idx_b])
             else:
-                cost = cost_delete[idx_a]
+                cost = cost_delete #[idx_a]
             pos_edges.append((idx_a, idx_b))
             costs.append(cost)
         if allow_splits and len(indices_b) > 1:
@@ -185,7 +197,7 @@ def _calc_pos_edges(
     # pdb.set_trace()
     for idx_b in range(len(centroids_b)):
         pos_edges.append((None, idx_b))
-        costs.append(cost_add[idx_b])
+        costs.append(cost_add) #[idx_b])
     return pos_edges, costs
 
 
@@ -194,11 +206,13 @@ def find_correspondances(
         centroids_b: np.ndarray,
         method_first: str = 'interior-point',
         thresh_dist: float = 45.,
-        allow_splits: bool = True,
+        allow_splits: bool = False,
         cost_add: Optional[float] = None,
         cost_delete: Optional[float] = None,
         volumes_a: Optional[np.ndarray] = None,
         volumes_b: Optional[np.ndarray] = None,
+        has_pair_b: Optional[np.ndarray] = None,
+        is_bridge: Optional[bool] = False
 ):
     """Find correspondances from a to b using centroids.
 
@@ -237,8 +251,17 @@ def find_correspondances(
     else:
         raise ValueError('Method first must be "simplex" or "interior-point"')
 
-    # cost_add = cost_add or thresh_dist*1.1
-    # cost_delete = cost_delete or thresh_dist*1.1
+    size_threshold = 0.70
+    if is_bridge:
+        thresh_dist = thresh_dist*1.5
+        size_threshold = size_threshold*.75
+
+    cost_add = cost_add or thresh_dist*1.1
+    cost_delete = cost_delete or thresh_dist*1.1
+
+    # cost_add = [thresh_dist*1.1 for dist in cost_add]
+    # cost_delete = [thresh_dist*1.1 for dist in cost_delete]
+
     pos_edges, costs = _calc_pos_edges(
         centroids_a=centroids_a,
         centroids_b=centroids_b,
@@ -251,7 +274,7 @@ def find_correspondances(
     )
     if len(pos_edges) == 0:
         return []
-    (edge_groups, edge_weights) = _calc_edge_groups(pos_edges, volumes_a, volumes_b)
+    (edge_groups, edge_weights) = _calc_edge_groups(pos_edges, volumes_a, volumes_b, has_pair_b, size_threshold)
     assert len(edge_groups) == (len(centroids_a) + len(centroids_b))
     assert len(edge_weights) == (len(centroids_a) + len(centroids_b))
     A_eq = []
@@ -274,8 +297,10 @@ def find_correspondances(
 
         if result.success:
             break
-        logger.info(f'Method {method} failed!')
+        # logger.info(f'Method {method} failed!')
     else:
+        for _, (indices, weights) in enumerate(zip(edge_groups, edge_weights)):
+            print(str(indices) + ' -> ' + str(weights))
         logger.info('Could not find solution!!!')
         raise ValueError
     indices = np.where(np.round(result.x))[0]
@@ -287,7 +312,12 @@ def find_correspondances(
     from itertools import combinations
     for i in range(2):
         for (edge_1, edge_2) in combinations(edges, 2):
-            if bool(set(edge_1[1:]) & set(edge_2[1:])) and edge_1[0] != edge_2[0]:
+            # import pdb
+            # pdb.set_trace()
+            # if edge_1[1] == edge_2[1]:
+            #     print(str(edge_1[1:]) + ' ' + str(edge_2[1:]))
+            # if bool(set(edge_1[1:]) & set(edge_2[1:])): # and edge_1[0] != edge_2[0]:
+            if any([i in edge_1[1:] for i in edge_2[1:]]):
                 
                 # import pdb
                 # pdb.set_trace() 

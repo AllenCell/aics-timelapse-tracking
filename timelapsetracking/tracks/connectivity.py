@@ -13,38 +13,49 @@ def _in_from_out(out_lists: NodetoEdgesMap):
     in_lists = {k: [] for k in out_lists}
     for parent, children in out_lists.items():
         for child in children:
-            in_lists[child].append(parent)
+            try:
+                in_lists[child].append(parent)
+            except:
+                continue
     return in_lists
 
 
-def graph_valid(out_lists: NodetoEdgesMap) -> bool:
+def graph_valid(out_lists: NodetoEdgesMap) -> (bool, int):
     """Verifies that input graph is valid.
 
     Acyclic. For each node, at most 1 in edge and at most 2 out edges.
 
     """
 
-    def _valid_helper(v: NodeType) -> bool:
+    def _valid_helper(v: NodeType) -> (bool, int):
         """Validates input node and its children."""
         being_explored[v] = True
         # Check for too many in or out edges
+        valid = (True, -1)
+        
         if len(in_lists[v]) > 1 or len(out_lists[v]) > 2:
             print('in-out error')
             print(v)
-            print(str(in_lists[v]) + ' ' + str(out_lists[v]))
-            return False
+            print(str(in_lists[v]) + ' -> ' + str(out_lists[v]))
+            valid = (False, v)
+            return valid
         for child in out_lists[v]:
             # print(child)
             if child not in being_explored:
-                if not _valid_helper(child):
+                valid = _valid_helper(child)
+                if not valid[0]:
                     print('child not valid helper')
-                    print(child)
-                    return False
+                    print(f'in:{in_lists[v]}')
+                    print(f'node:{v}')
+                    print(f'out:{child}')
+                    valid = (False, valid[1])
+                    return valid
             elif being_explored[child]:  # Cycle detected
-                # print('being explored error')
-                return False
+                print('being explored error')
+                valid = (False, child)
+                return valid
         being_explored[v] = False
-        return True
+        return valid
 
     in_lists = _in_from_out(out_lists)
     # being_explored maps from node to whether node is currently being explored
@@ -56,10 +67,11 @@ def graph_valid(out_lists: NodetoEdgesMap) -> bool:
         if v not in being_explored:
             if not _valid_helper(v):
                 print(f'node {v} failed')
-                print(in_lists[v])
-                print(out_lists[v])
-                return False
-    return True
+                print(f'in:{in_lists[v]}')
+                print(f'node:{v}')
+                print(f'out:{out_lists[v]}')
+                return (False, v)
+    return (True, -1)
 
 
 class _Explorer:
@@ -157,7 +169,11 @@ def add_connectivity_labels(df: pd.DataFrame) -> pd.DataFrame:
         k: ast.literal_eval(v) if isinstance(v, str) else v
         for k, v in df['out_list'].to_dict().items()
     }
-    if not graph_valid(out_lists):
+    valid = graph_valid(out_lists)
+    print(valid)
+    print(valid[0])
+    if not valid[0]:
+        print(df.iloc[valid[1]])
         raise ValueError('Bad input graph')
     lineage_ids = _calc_weakly_connected_components(out_lists)
     track_ids = _calc_track_ids(out_lists)
