@@ -166,10 +166,10 @@ def visualize_objects(
         )
     for idx_seg, segment in enumerate(segments):
         ys, xs = [i for i in zip(*segment)]
-        ax.plot(xs, ys, color=colors_segments[idx_seg], linewidth=4.0)
+        ax.plot(xs, ys, color=colors_segments[idx_seg], linewidth=6.0)
     for label in labels:
         y, x = label[0]
-        ax.text(x=x, y=y, s=str(label[1]), color='white', size='large')
+        ax.text(x=x, y=y, s=str(label[1]), color='white', fontweight='bold', fontsize=24)
     dpi = fig.get_dpi()
     fig.set_size_inches(xlim/dpi, ylim/dpi)
     ax.add_collection(PatchCollection(patches, match_original=True))
@@ -357,12 +357,15 @@ def visualize_tracks_2d(
             if len(indices_segs) > 1:
                 raise NotImplementedError
             if len(indices_segs) > 0:
-                segments.append((
-                    df.loc[indices_segs[0], 'centroid'],
-                    row.centroid,
-                ))
-                colors_segments.append(color_map.get(row['lineage_id']))
-        path_tif = Path(path_save_dir, f'{idx:03d}_tracks.tif')
+                try:
+                    segments.append((
+                        df.loc[indices_segs[0], 'centroid'],
+                        row.centroid,
+                    ))
+                    colors_segments.append(color_map.get(row['lineage_id']))
+                except:
+                    import pdb; pdb.set_trace()
+        path_tif = Path(path_save_dir, f'{idx:03d}_tracks.tiff')
         labels = [
             f'{l}:{t}' for l, t in zip(
                 df_g['lineage_id'].tolist(), df_g['track_id'].tolist()
@@ -382,7 +385,7 @@ def visualize_tracks_2d(
     # Create blank images for frames with no tracks
     while indices_todo:
         idx = indices_todo.pop()
-        path_tif = Path(path_save_dir, f'{idx:03d}_tracks.tif')
+        path_tif = Path(path_save_dir, f'{idx:03d}_tracks.tiff')
         if idx > idx_last:
             img = track_visualizer.render(centroids=[], segments=[])
         else:

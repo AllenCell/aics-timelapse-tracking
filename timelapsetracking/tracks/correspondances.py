@@ -27,7 +27,7 @@ def _calc_edge_groups(edges: List[Tuple],
                     volumes_a: np.ndarray,
                     volumes_b: np.ndarray,
                     has_pair_b: np.ndarray,
-                    size_threshold: float = 0.50,
+                    size_threshold: float = 0.70,
                     weight_scaler: float = 1.0,
                     pair_scaler: float = 0.25
 ) -> List[List[int]]:
@@ -251,10 +251,10 @@ def find_correspondances(
     else:
         raise ValueError('Method first must be "simplex" or "interior-point"')
 
-    size_threshold = 0.70
+    size_threshold = 0.8
     if is_bridge:
-        thresh_dist = thresh_dist*1.5
-        size_threshold = size_threshold*.75
+        thresh_dist = thresh_dist*1.25
+        # size_threshold = size_threshold*.9
 
     cost_add = cost_add or thresh_dist*1.1
     cost_delete = cost_delete or thresh_dist*1.1

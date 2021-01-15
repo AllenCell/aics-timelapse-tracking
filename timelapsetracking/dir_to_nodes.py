@@ -49,6 +49,9 @@ def img_to_nodes(
     if meta is None:
         meta = {}
 
+    if 'Pair' in fov:
+        fov['Pair'] = fov['Pair'].fillna(0)
+
     # field_shape = np.array(img.shape)
     field_shape = im_shape
     # origin = np.zeros_like(field_shape)
@@ -92,13 +95,14 @@ def img_to_nodes(
 
         node['edge_cell'] = bool(fov.Edge_Cell[index])
 
-        if fov.Pair[index] != 0:
+        if fov.Pair[index] != 0 and fov.Pair[index] != float('nan'):
             node['has_pair'] = True
 
         node.update(meta)
         nodes.append(node)
 
-        if fov.Pair[index] != 0:
+        if node['has_pair']:
+            print(fov.Pair[index])
             pair_node = {}
             idx_partner = fov.index[fov['CellLabel']==fov.Pair[index]].tolist()[0]
             if idx_partner in pairs_done:
@@ -106,7 +110,7 @@ def img_to_nodes(
             else:
                 pairs_done.append(index)
                 pairs_done.append(idx_partner)
-            pair_node['volume'] = (node['volume'] + fov.Volume[idx_partner])//2
+            pair_node['volume'] = ((node['volume'] + fov.Volume[idx_partner]) + ((node['volume'] + fov.Volume[idx_partner])/2))/2
             pair_labels = [node['label_img'], fov.CellLabel[idx_partner]]
             pair_labels.sort()
             pair_node['label_img'] = pair_labels

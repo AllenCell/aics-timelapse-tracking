@@ -56,6 +56,7 @@ def add_edges(
     for idx_s in tqdm(range(index_vals.min()+1, index_vals.max() + 1)):
 
         LOGGER.info(f'Processing {col_index_sequence}: {idx_s}')
+        print(f'Processing {col_index_sequence}: {idx_s}')
         df_prev = df.query(f'{col_index_sequence} == (@idx_s-1)')
         keep_idxs = [index for index, row in df_prev.iterrows() 
                         if not row['is_pair']]
@@ -235,6 +236,8 @@ def bridge_edges(
     cols_zyx = ['centroid_z', 'centroid_y', 'centroid_x']
 
     index_vals = df_edges[col_index_sequence].unique()
+    if window < 0:
+        window = 0
     
     for idx_s in tqdm(range(index_vals.min()+1, index_vals.max() + 1)):
 
@@ -290,7 +293,6 @@ def bridge_edges(
 
         new_edges = [edge for edge in edges if all(edge)]
         print(f'{len(new_edges)} new edges bridged')
-        pdb.set_trace()
 
         for edge_from, edge_to in new_edges:
             if edge_from is None or edge_to is None:
