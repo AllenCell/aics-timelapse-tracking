@@ -117,22 +117,6 @@ def img_to_nodes(
             pair_node['is_pair'] = True
             pair_node['has_pair'] = False
 
-
-            # obj_idxs = None
-            # for label in pair_labels:
-            #     if obj_idxs is None:
-            #         obj_idxs = np.argwhere(img==label)
-            #     else:
-            #         obj_idxs = np.concatenate((obj_idxs, np.argwhere(img==label)),
-            #                                 axis=0)
-
-            # min_coors = np.min(obj_idxs, axis=0)
-            # max_coors = np.max(obj_idxs, axis=0)
-            # is_edge =  np.any(np.logical_or(np.equal(min_coors, origin),
-            #                     np.equal(max_coors, field_shape-1)))
-            
-            # pair_node['edge_cell'] = is_edge
-
             pair_node['edge_cell'] = bool(fov.Edge_Cell[index] + fov.Edge_Cell[idx_partner])
 
             rcm_p = eval(fov.Centroid[idx_partner])

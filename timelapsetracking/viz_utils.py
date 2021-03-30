@@ -333,8 +333,8 @@ def visualize_tracks_2d(
         if col not in df.columns:
             raise ValueError(f'{col} column expected in df')
     color_map = color_map or {}
-    index_max = index_max or df['index_sequence'].max()
-    index_min = index_min or df['index_sequence'].min()
+    index_max = index_max or int(df['index_sequence'].max())
+    index_min = index_min or int(df['index_sequence'].min())
     indices_todo = set(range(index_min, index_max + 1))
     path_save_dir.mkdir(parents=True, exist_ok=True)
     centroids = df.apply(
@@ -345,6 +345,7 @@ def visualize_tracks_2d(
     track_visualizer = TrackVisualizer(shape=shape)
     idx_last = str('inf')
     for idx, df_g in df.groupby('index_sequence'):
+        idx = int(idx)
         if idx not in indices_todo:
             continue
         segments = []
