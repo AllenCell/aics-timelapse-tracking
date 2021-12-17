@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tifffile
+from aicsimageio.writers import OmeTiffWriter
 
 from timelapsetracking.util import images_from_dir
 
@@ -64,7 +65,22 @@ def save_tif(path_save: str, img: np.ndarray) -> None:
         raise TypeError('Images must be type uint8 or bool')
     if img.dtype == bool:
         img = img.astype(np.uint8)*255
-    tifffile.imsave(path_save, img, compress=2)
+
+    if img.shape[-1] == 3:
+        dim_list = list(np.arange(img.ndim))
+        dim_list = [dim_list[-1]] + dim_list[:-1]
+        img = np.transpose(img, dim_list)
+
+    if img.shape[0] == 3:
+        dims = 'C' + "ZYX"[-(img.ndim-1):]
+    else:
+        dims = "ZYX"[-img.ndim:]
+    
+    # tifffile.imsave(path_save, img, compress=2)
+    with OmeTiffWriter(path_save, overwrite_file=True) as writer:
+        writer.save(img, dimension_order=dims)
+
+
     LOGGER.info('Saved: %s', path_save)
 
 
@@ -104,6 +120,7 @@ def visualize_objects(
         shape: Tuple[int, int] = (512, 512),
         colors_points: Union[List[Color], Color] = 'lime',
         colors_segments: Union[List[Color], Color] = 'red',
+        display_labels: bool = False
 ) -> np.ndarray:
     """Draws objects on a blank canvas.
 
@@ -143,12 +160,12 @@ def visualize_objects(
     if isinstance(colors_segments, list):
         if len(colors_segments) != len(segments):
             raise ValueError('Length of color_segments and segments must match')
-        colors_segments = ['red' if c is None else c for c in colors_segments]
+        colors_segments = ['white' if c is None else c for c in colors_segments]
     patches = []
     fig, ax = plt.subplots(facecolor='black')
     if points:
         points_y, points_x = [coord for coord in zip(*points)]
-        ax.scatter(points_x, points_y, c=colors_points, s=50.0)
+        ax.scatter(points_x, points_y, c=colors_points, s=100.0)
     for center in circles:
         kwargs = {
             'color': 'salmon',
@@ -166,10 +183,11 @@ def visualize_objects(
         )
     for idx_seg, segment in enumerate(segments):
         ys, xs = [i for i in zip(*segment)]
-        ax.plot(xs, ys, color=colors_segments[idx_seg], linewidth=6.0)
-    for label in labels:
-        y, x = label[0]
-        ax.text(x=x, y=y, s=str(label[1]), color='white', fontweight='bold', fontsize=24)
+        ax.plot(xs, ys, color=colors_segments[idx_seg], linewidth=10.0)
+    if display_labels:
+        for label in labels:
+            y, x = label[0]
+            ax.text(x=x, y=y, s=str(label[1]), color='white', fontweight='bold', fontsize=24)
     dpi = fig.get_dpi()
     fig.set_size_inches(xlim/dpi, ylim/dpi)
     ax.add_collection(PatchCollection(patches, match_original=True))
@@ -275,6 +293,7 @@ class TrackVisualizer:
             colors_centroids: Optional[list] = None,
             colors_segments: Optional[list] = None,
             labels: Optional[list] = None,
+            display_labels: bool = False,
     ) -> np.ndarray:
         """Render image of centroids with tracks.
 
@@ -286,6 +305,7 @@ class TrackVisualizer:
             shape=self.shape,
             colors_points=colors_centroids,
             labels=labels,
+            display_labels=display_labels,
         )
         img_tracks = _blend_lighten_only(
             (self.img_tracks_prev*self.alpha).round().astype(np.uint8),
@@ -303,6 +323,7 @@ def visualize_tracks_2d(
         df: pd.DataFrame,
         shape: Tuple[int, int],
         path_save_dir: Path,
+        display_ids: bool = False,
         color_map: Optional[Dict] = None,
         index_max: Optional[int] = None,
         index_min: Optional[int] = None,
@@ -368,7 +389,7 @@ def visualize_tracks_2d(
                     import pdb; pdb.set_trace()
         path_tif = Path(path_save_dir, f'{idx:03d}_tracks.tiff')
         labels = [
-            f'{l}:{t}' for l, t in zip(
+            f'{int(l)}:{int(t)}' for l, t in zip(
                 df_g['lineage_id'].tolist(), df_g['track_id'].tolist()
             )
         ]
@@ -378,6 +399,7 @@ def visualize_tracks_2d(
             colors_centroids=df_g['color'].tolist(),
             colors_segments=colors_segments,
             labels=labels,
+            display_labels=display_ids,
         )
         save_tif(path_tif, img)
         indices_todo.remove(idx)

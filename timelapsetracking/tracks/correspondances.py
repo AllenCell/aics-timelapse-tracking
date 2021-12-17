@@ -28,7 +28,7 @@ def _calc_edge_groups(edges: List[Tuple],
                     volumes_b: np.ndarray,
                     has_pair_b: np.ndarray,
                     size_threshold: float = 0.70,
-                    weight_scaler: float = 1.0,
+                    weight_scaler: float = 2.0,
                     pair_scaler: float = 0.25
 ) -> List[List[int]]:
     """Calculate groups of edge indices that correspond to the same object.
@@ -67,29 +67,56 @@ def _calc_edge_groups(edges: List[Tuple],
                 w = volumes_a[idx_a]/(volumes_b[idx_b[0]]+volumes_b[idx_b[1]])
         if idx_a is not None:
             constraints_a[idx_a].append(idx_e)
-            if w < size_threshold:
+            if w < size_threshold or w > 1/size_threshold:
                 weights_a[idx_a].append((1/w*scale)**weight_scaler)
+                # weights_a[idx_a].append(1/w)
             else:
                 weights_a[idx_a].append(1*scale)
+                # weights_a[idx_a].append(scale)
+            
+            if weights_a[idx_a][-1] < 0.2:
+                weights_a[idx_a][-1] = 0.2
+            if weights_a[idx_a][-1] > 5:
+                weights_a[idx_a][-1] = 5
+
+
         if isinstance(idx_b, int):
             constraints_b[idx_b].append(idx_e)
-            if w > 1/size_threshold:
+            if w < size_threshold or w > 1/size_threshold:
                 weights_b[idx_b].append((w*scale)**weight_scaler)
+                # weights_b[idx_b].append(w)
             else:
                 weights_b[idx_b].append(1)
+
+            if weights_b[idx_b][-1] < 0.2:
+                weights_b[idx_b][-1] = 0.2
+            if weights_b[idx_b][-1] > 5:
+                weights_b[idx_b][-1] = 5
         elif isinstance(idx_b, tuple):
             constraints_b[idx_b[0]].append(idx_e)
             constraints_b[idx_b[1]].append(idx_e)
-            if w > 1/size_threshold:
+            if w < size_threshold or w > 1/size_threshold:
                 weights_b[idx_b[0]].append(w*scale)
                 weights_b[idx_b[1]].append(w*scale)
+                # weights_b[idx_b[0]].append(w)
+                # weights_b[idx_b[1]].append(w)
             else:
                 weights_b[idx_b[0]].append(1*scale)
                 weights_b[idx_b[1]].append(1*scale)
-
-    # import pdb
-    # pdb.set_trace()
+                # weights_b[idx_b[0]].append(1)
+                # weights_b[idx_b[1]].append(1)
+            
+            if weights_b[idx_b[0]][-1] < 0.2:
+                weights_b[idx_b[0]][-1] = 0.2
+            if weights_b[idx_b[1]][-1] < 0.2:
+                weights_b[idx_b[1]][-1] = 0.2
+            if weights_b[idx_b[0]][-1] > 5:
+                weights_b[idx_b[0]][-1] = 5
+            if weights_b[idx_b[1]][-1] > 5:
+                weights_b[idx_b[1]][-1] = 5
     
+    # import pdb; pdb.set_trace()
+
     return (
         ([c for c in constraints_a.values()]
         + [c for c in constraints_b.values()],
@@ -251,7 +278,7 @@ def find_correspondances(
     else:
         raise ValueError('Method first must be "simplex" or "interior-point"')
 
-    size_threshold = 0.8
+    size_threshold = 0.9
     if is_bridge:
         thresh_dist = thresh_dist*1.25
         # size_threshold = size_threshold*.9
@@ -278,6 +305,8 @@ def find_correspondances(
     assert len(edge_groups) == (len(centroids_a) + len(centroids_b))
     assert len(edge_weights) == (len(centroids_a) + len(centroids_b))
     A_eq = []
+
+    # import pdb; pdb.set_trace()
     
     for _, (indices, weights) in enumerate(zip(edge_groups, edge_weights)):
         constraint = np.zeros(len(pos_edges), dtype=np.float)

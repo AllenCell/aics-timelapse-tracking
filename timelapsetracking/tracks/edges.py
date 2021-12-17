@@ -91,6 +91,8 @@ def add_edges(
         has_pair_curr = df_curr['has_pair'].values
 
         # import pdb; pdb.set_trace()
+
+        # import pdb; pdb.set_trace()
         if 'volume' in df_curr.columns:
             volumes_prev = df_prev['volume'].values#to_numpy()
             volumes_curr = df_curr['volume'].values#to_numpy()
@@ -202,7 +204,9 @@ def add_edges(
     remove_idx = [index for index, row in df_edges.iterrows() 
                     if row['is_pair']]
     
+    print(df_edges.tail())
     df_edges = df_edges.drop(df_edges[df_edges.is_pair].index)
+    print(df_edges.tail())
 
 
     df_edges = df_edges.drop(columns=['label_img', 
@@ -262,11 +266,51 @@ def add_pseudo_pairs(
         print(f'Starting in {timepoint}')
         pseudo_child_1, pseudo_child_2 = find_psuedo_pair(child_1, child_2, df_edges, col_index_sequence, start=True)
         
-        pseudo_pair = {}
+        
         if pseudo_child_1 is not None or pseudo_child_2 is not None:
             # import pdb; pdb.set_trace()
             print('Found cells for pseudo-pair')
-            pseudo_pair['volume'] = ((pseudo_child_1['volume'].values[0] + pseudo_child_2['volume'].values[0]) + ((pseudo_child_1['volume'].values[0] + pseudo_child_2['volume'].values[0])/2))/2
+            pseudo_pair = {}
+            pseudo_pair['volume'] = pseudo_child_1['volume'].values[0] + pseudo_child_2['volume'].values[0]
+
+            lbl_1 = pseudo_child_1['label_img']
+            if isinstance(lbl_1, pd.Series):
+                lbl_1 = lbl_1.values[0]
+            lbl_2 = pseudo_child_2['label_img']
+            if isinstance(lbl_2, pd.Series):
+                lbl_2 = lbl_2.values[0]
+            pair_labels = [lbl_1, lbl_2]
+
+            pair_labels.sort()
+            pseudo_pair['label_img'] = str(pair_labels)
+            pseudo_pair['is_pair'] = True
+            pseudo_pair['has_pair'] = False
+            pseudo_pair['in_list'] = '[]'
+            pseudo_pair['out_list'] = '[]'
+
+            # try:
+            pseudo_pair['edge_cell'] = bool(pseudo_child_1['edge_cell'].values[0] + pseudo_child_2['edge_cell'].values[0])
+            # except:
+            # pseudo_pair['edge_cell'] = bool(pseudo_child_1['edge_cell'] + pseudo_child_2['edge_cell'])
+
+            for idx_d, dim in enumerate('zyx'):
+                # if isinstance(pseudo_child_1,pd.DataFrame):
+                pseudo_pair[f'centroid_{dim}'] = (pseudo_child_1[f'centroid_{dim}'].values[0] + pseudo_child_2[f'centroid_{dim}'].values[0])/2
+                # else:
+                # pseudo_pair[f'centroid_{dim}'] = (pseudo_child_1[f'centroid_{dim}'] + pseudo_child_2[f'centroid_{dim}'])/2
+            
+            pseudo_pair['edge_distance'] = (pseudo_child_1['edge_distance'].values[0] + pseudo_child_2['edge_distance'].values[0])/2
+            pseudo_pair[col_index_sequence] = int(pseudo_child_1[col_index_sequence])
+
+            pseudo_pair = pd.DataFrame(pseudo_pair, index=[df_edges.shape[0]+1])
+            pseudo_pair.index.name = 'node_id'
+
+            pseudo_pair.reindex(columns=df_edges.columns)
+
+            df_edges = df_edges.append(pseudo_pair)
+
+            pseudo_pair = {}
+            pseudo_pair['volume'] = ((pseudo_child_1['volume'].values[0] + pseudo_child_2['volume'].values[0]) + (pseudo_child_1['volume'].values[0] + pseudo_child_2['volume'].values[0])/2)/2
             
             lbl_1 = pseudo_child_1['label_img']
             if isinstance(lbl_1, pd.Series):
@@ -303,6 +347,7 @@ def add_pseudo_pairs(
             pseudo_pair.reindex(columns=df_edges.columns)
 
             df_edges = df_edges.append(pseudo_pair)
+
             prev = pseudo_pair
             
             in_1 = pseudo_child_1['in_list']

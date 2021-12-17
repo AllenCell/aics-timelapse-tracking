@@ -36,7 +36,7 @@ interactive_dev_deps = [
     'jupyter',
     'itkwidgets',
     'ipython',
-    'ipywidgets'
+    'ipywidgets',
 ]
 all_deps = [*test_deps, *lint_deps, *interactive_dev_deps]
 

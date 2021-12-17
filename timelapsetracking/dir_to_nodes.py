@@ -54,6 +54,7 @@ def img_to_nodes(
 
     # field_shape = np.array(img.shape)
     field_shape = im_shape
+    print(field_shape)
     # origin = np.zeros_like(field_shape)
     nodes = []
     pairs_done = []
@@ -65,10 +66,13 @@ def img_to_nodes(
         node['label_img'] = fov.CellLabel[index]
         node['is_pair'] = False
         node['has_pair'] = False
-
+        
         rcm = eval(fov.Centroid[index])
+        if len(rcm) > len(field_shape):
+            pad = (1,)
+            field_shape = pad + field_shape
         edge_distance = np.amax(field_shape)
-        for idx_d, dim in enumerate('zyx'[-len(im_shape):]):
+        for idx_d, dim in enumerate('zyx'[-len(field_shape):]):
             node[f'centroid_{dim}'] = rcm[idx_d]
             if dim != 'z':
                 edge_distance = np.amin([edge_distance, 
@@ -102,15 +106,45 @@ def img_to_nodes(
         nodes.append(node)
 
         if node['has_pair']:
-            print(fov.Pair[index])
             pair_node = {}
             idx_partner = fov.index[fov['CellLabel']==fov.Pair[index]].tolist()[0]
+            node_partner = fov.loc[idx_partner]
             if idx_partner in pairs_done:
                 continue
             else:
                 pairs_done.append(index)
                 pairs_done.append(idx_partner)
-            pair_node['volume'] = ((node['volume'] + fov.Volume[idx_partner]) + ((node['volume'] + fov.Volume[idx_partner])/2))/2
+
+            print(node)
+            print(node_partner)
+            print(im_shape)
+
+            pair_node['volume'] = (node['volume'] + node_partner['Volume'])/2
+            pair_labels = [node['label_img'], node_partner['CellLabel']]
+            pair_labels.sort()
+            pair_node['label_img'] = pair_labels
+            pair_node['is_pair'] = True
+            pair_node['has_pair'] = False
+
+            pair_node['edge_cell'] = node['edge_cell'] + node_partner['Edge_Cell']
+
+            rcm_p = eval(node_partner['Centroid'])
+            edge_distance = np.amax(field_shape)
+            for idx_d, dim in enumerate('zyx'[-len(im_shape):]):
+                print(str(node[f'centroid_{dim}']) + ' - ' + str(rcm_p[idx_d]))
+                pair_node[f'centroid_{dim}'] = (node[f'centroid_{dim}'] + rcm_p[idx_d])/2
+                if dim != 'z':
+                    edge_distance = np.amin([edge_distance, pair_node[f'centroid_{dim}'], field_shape[idx_d]-pair_node[f'centroid_{dim}']])
+            pair_node['edge_distance'] = edge_distance
+
+            pair_node.update(meta)
+            nodes.append(pair_node)
+
+
+
+            pair_node = {}
+            idx_partner = fov.index[fov['CellLabel']==fov.Pair[index]].tolist()[0]
+            pair_node['volume'] = node['volume'] + fov.Volume[idx_partner]
             pair_labels = [node['label_img'], fov.CellLabel[idx_partner]]
             pair_labels.sort()
             pair_node['label_img'] = pair_labels
@@ -129,6 +163,7 @@ def img_to_nodes(
             pair_node.update(meta)
             nodes.append(pair_node)
             print('Pair Node Created')
+            
 
         
     return nodes
