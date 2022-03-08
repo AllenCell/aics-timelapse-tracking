@@ -76,9 +76,8 @@ def save_tif(path_save: str, img: np.ndarray) -> None:
     else:
         dims = "ZYX"[-img.ndim:]
     
-    # tifffile.imsave(path_save, img, compress=2)
-    with OmeTiffWriter(path_save, overwrite_file=True) as writer:
-        writer.save(img, dimension_order=dims)
+    tifffile.imsave(path_save, img, compress=2)
+    # OmeTiffWriter.save(path_save, img, dimension_order=dims)
 
 
     LOGGER.info('Saved: %s', path_save)

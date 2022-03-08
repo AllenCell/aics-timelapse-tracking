@@ -101,10 +101,10 @@ def _calc_edge_groups(edges: List[Tuple],
                 # weights_b[idx_b[0]].append(w)
                 # weights_b[idx_b[1]].append(w)
             else:
-                weights_b[idx_b[0]].append(1*scale)
-                weights_b[idx_b[1]].append(1*scale)
-                # weights_b[idx_b[0]].append(1)
-                # weights_b[idx_b[1]].append(1)
+                # weights_b[idx_b[0]].append(1*scale)
+                # weights_b[idx_b[1]].append(1*scale)
+                weights_b[idx_b[0]].append(1)
+                weights_b[idx_b[1]].append(1)
             
             if weights_b[idx_b[0]][-1] < 0.2:
                 weights_b[idx_b[0]][-1] = 0.2
