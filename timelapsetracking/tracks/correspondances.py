@@ -233,6 +233,7 @@ def find_correspondances(
         centroids_b: np.ndarray,
         method_first: str = 'interior-point',
         thresh_dist: float = 45.,
+        thresh_size: float = 0.9,
         allow_splits: bool = False,
         cost_add: Optional[float] = None,
         cost_delete: Optional[float] = None,
@@ -278,10 +279,10 @@ def find_correspondances(
     else:
         raise ValueError('Method first must be "simplex" or "interior-point"')
 
-    size_threshold = 0.9
+    size_threshold = thresh_size
     if is_bridge:
-        thresh_dist = thresh_dist*1.25
-        # size_threshold = size_threshold*.9
+        thresh_dist = thresh_dist*1.5
+        size_threshold = size_threshold*.9
 
     cost_add = cost_add or thresh_dist*1.1
     cost_delete = cost_delete or thresh_dist*1.1
@@ -357,28 +358,33 @@ def find_correspondances(
                 print('merge found')
                 print(str(edge_1) + ' ' + str(edge_2))
 
-                if edge_1[0] is None:
-                    try:
-                        edges.remove(edge_1)
-                        continue
-                    except:
-                        continue
+                # if edge_1[0] is None:
+                #     try:
+                #         edges.remove(edge_1)
+                #         continue
+                #     except:
+                #         continue
 
-                elif edge_2[0] is None:
-                    try:
-                        edges.remove(edge_2)
-                        continue
-                    except:
-                        continue
+                # elif edge_2[0] is None:
+                #     try:
+                #         edges.remove(edge_2)
+                #         continue
+                #     except:
+                #         continue
 
 
                 idx_1 = pos_edges.index(edge_1)
                 idx_2 = pos_edges.index(edge_2)
 
-                cost_1 = costs[idx_1]
-                cost_2 = costs[idx_2]
+                cost_1 = result.x[idx_1]
+                cost_2 = result.x[idx_2]
 
-                if cost_1 >= cost_2:
+                print(str(cost_1) + ' vs ' + str(cost_2))
+                print(cost_1/cost_2)
+
+                ratio = cost_1/cost_2
+
+                if ratio < 0.9:
                     try:
                         edges.remove(edge_1)
                         edges.append((edge_1[0],None))
