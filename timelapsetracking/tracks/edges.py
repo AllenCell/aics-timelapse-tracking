@@ -197,7 +197,8 @@ def add_edges(
     df_edges = add_pseudo_pairs(df_edges, pairs_to_redo, col_index_sequence, **kwargs)
     
     # attempt to bridge non-edge cells with missing graph edges
-    df_edges = bridge_edges(df_edges, col_index_sequence, 3, **kwargs)
+    win = 8
+    df_edges = bridge_edges(df_edges, col_index_sequence, win, **kwargs)
     
 
     # remove pair nodes in cuur from full dataframe

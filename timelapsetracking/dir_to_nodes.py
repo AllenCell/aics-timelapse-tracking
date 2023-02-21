@@ -177,6 +177,7 @@ def _img_to_nodes_wrapper(in_args) -> List[Dict]:
     logger.info(f'Processing: {meta["path_tif"]}')
     print(meta['path_tif'])
     # img = tifffile.imread(meta['path_tif'])
+    print(meta['path_tif'].replace('.tiff','.tif').replace('.tif','_region_props.csv'))
     fov = pd.read_csv(meta['path_tif'].replace('.tiff','.tif').replace('.tif','_region_props.csv'))#, index_col=0)
     return img_to_nodes(im_shape, fov, meta=meta)
 
@@ -209,6 +210,8 @@ def dir_to_nodes(
     im_shapes = []
     for idx, path in enumerate(paths_img):
         if idx % sampling == 0:
+            if '._' in path:
+                continue
             metas.append({'index_sequence': timepoint, 'time_index': idx, 'path_tif': path})
             im_shapes.append(im_shape)
             timepoint += 1
