@@ -189,8 +189,8 @@ def _calc_pos_edges(
             # magnitudes of the displacement vectors. Two objects in the second
             # object group might be paired children if their displacement
             # vector angles are ~-180 apart and if the magnitudes are similar.
-            displacements = (tree_b.data[indices_b] - tree_a.data[idx_a]).astype(np.float)
-            mags = np.sqrt(np.sum(displacements**2, axis=1)).astype(np.float)
+            displacements = (tree_b.data[indices_b] - tree_a.data[idx_a]).astype(float)
+            mags = np.sqrt(np.sum(displacements**2, axis=1)).astype(float)
             # try:
             displacements /= mags[:, np.newaxis]
             # except:
@@ -310,7 +310,7 @@ def find_correspondances(
     # import pdb; pdb.set_trace()
     
     for _, (indices, weights) in enumerate(zip(edge_groups, edge_weights)):
-        constraint = np.zeros(len(pos_edges), dtype=np.float)
+        constraint = np.zeros(len(pos_edges), dtype=float)
         for _, (index, weight) in enumerate(zip(indices, weights)):
             constraint[index] = weight
         A_eq.append(constraint)
