@@ -58,7 +58,7 @@ def test_img_to_nodes_v2(
 ):
     """Tests img_to_nodes function with dummy 2d or 3d images."""
     # Form expected output
-    centroids_np = np.array(centroids, dtype=np.float)
+    centroids_np = np.array(centroids, dtype=float)
     ndim = centroids_np.shape[1]
     columns = [f'centroid_{dim}' for dim in 'zyx'[-ndim:]]
     df_exp = pd.DataFrame(centroids_np, columns=columns)
