@@ -241,6 +241,7 @@ def dir_to_nodes(
     
     df = pd.DataFrame(nodes)
     df = pd.concat([df[[not i for i in df.is_pair.values]],
-                    df[df.is_pair.values]]).reset_index(drop=True).rename_axis('node_id', axis=0)
+                    df[df.is_pair.values]]).reset_index(drop=True)
     # df = df.drop(columns=['is_pair'])
+    df = df.drop(df[df.volume < 500].index).reset_index(drop=True).rename_axis('node_id', axis=0)
     return df

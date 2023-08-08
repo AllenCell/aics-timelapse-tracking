@@ -116,6 +116,8 @@ def visualize_objects(
         segments: Optional[Sequence[Tuple[Pos, Pos]]] = None,
         labels: Optional[Sequence[Tuple[Pos, str]]] = None,
         radius: int = 16,
+        line_width: float = 10.0,
+        font_size: int = 24,
         shape: Tuple[int, int] = (512, 512),
         colors_points: Union[List[Color], Color] = 'lime',
         colors_segments: Union[List[Color], Color] = 'red',
@@ -182,11 +184,11 @@ def visualize_objects(
         )
     for idx_seg, segment in enumerate(segments):
         ys, xs = [i for i in zip(*segment)]
-        ax.plot(xs, ys, color=colors_segments[idx_seg], linewidth=10.0)
+        ax.plot(xs, ys, color=colors_segments[idx_seg], linewidth=line_width)
     if display_labels:
         for label in labels:
             y, x = label[0]
-            ax.text(x=x, y=y, s=str(label[1]), color='white', fontweight='bold', fontsize=24)
+            ax.text(x=x, y=y, s=str(label[1]), color='white', fontweight='bold', fontsize=font_size)
     dpi = fig.get_dpi()
     fig.set_size_inches(xlim/dpi, ylim/dpi)
     ax.add_collection(PatchCollection(patches, match_original=True))
@@ -292,6 +294,9 @@ class TrackVisualizer:
             colors_centroids: Optional[list] = None,
             colors_segments: Optional[list] = None,
             labels: Optional[list] = None,
+            radius: int = 16,
+            line_width: float = 10.0,
+            font_size: int = 24,
             display_labels: bool = False,
     ) -> np.ndarray:
         """Render image of centroids with tracks.
@@ -304,6 +309,9 @@ class TrackVisualizer:
             shape=self.shape,
             colors_points=colors_centroids,
             labels=labels,
+            radius=radius,
+            line_width=line_width,
+            font_size=font_size,
             display_labels=display_labels,
         )
         img_tracks = _blend_lighten_only(
@@ -312,6 +320,9 @@ class TrackVisualizer:
                 segments=segments,
                 shape=self.shape,
                 colors_segments=colors_segments,
+                labels=labels,
+                radius=radius,
+                line_width=line_width,
             )
         )
         self.img_tracks_prev = img_tracks
@@ -323,6 +334,9 @@ def visualize_tracks_2d(
         shape: Tuple[int, int],
         path_save_dir: Path,
         display_ids: bool = False,
+        radius: int = 16,
+        line_width: float = 10.0,
+        font_size: int = 24,
         color_map: Optional[Dict] = None,
         index_max: Optional[int] = None,
         index_min: Optional[int] = None,
@@ -398,6 +412,9 @@ def visualize_tracks_2d(
             colors_centroids=df_g['color'].tolist(),
             colors_segments=colors_segments,
             labels=labels,
+            radius=radius,
+            line_width=line_width,
+            font_size=font_size,
             display_labels=display_ids,
         )
         save_tif(path_tif, img)
