@@ -40,7 +40,6 @@ def graph_valid(out_lists: NodetoEdgesMap) -> (bool, int):
             valid = (False, v)
             return valid
         for child in out_lists[v]:
-            # print(child)
             if child not in being_explored:
                 valid = _valid_helper(child)
                 if not valid[0]:

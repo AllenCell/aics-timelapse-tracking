@@ -44,24 +44,17 @@ def img_to_nodes(
     """
     if len(im_shape) not in [2, 3]:
         raise ValueError('Images must be 2d or 3d')
-    # if not np.issubdtype(img.dtype, np.unsignedinteger):
-    #     raise TypeError('Image must be np.unsignedinteger compatible')
     if meta is None:
         meta = {}
 
     if 'Pair' in fov:
         fov['Pair'] = fov['Pair'].fillna(0)
 
-    # field_shape = np.array(img.shape)
     field_shape = im_shape
-    print(field_shape)
-    # origin = np.zeros_like(field_shape)
     nodes = []
     pairs_done = []
     for index in fov.index:
         node = {}
-        # if fov.Volume[index] < 50000:
-        #     continue
         node['volume'] = fov.Volume[index]
         node['label_img'] = fov.CellLabel[index]
         node['is_pair'] = False
@@ -79,23 +72,6 @@ def img_to_nodes(
                                         rcm[idx_d], 
                                         field_shape[idx_d]-rcm[idx_d]])
         node['edge_distance'] = edge_distance
-
-        # check if cell segmentation is touching boundary and label as edge cell
-        # obj_idxs = None
-        # obj_idxs = np.argwhere(img==node['label_img'])
-
-        # if obj_idxs.size == 0:
-        #     continue
-        
-        # min_coors = np.min(obj_idxs, axis=0)
-        # max_coors = np.max(obj_idxs, axis=0)
-        # is_edge =  np.any(np.logical_or(np.equal(min_coors, origin),
-        #                         np.equal(max_coors, field_shape-1)))
-
-        # node['edge_cell'] = is_edge
-
-        # import pdb
-        # pdb.set_trace()
 
         node['edge_cell'] = bool(fov.Edge_Cell[index])
 
@@ -176,7 +152,6 @@ def _img_to_nodes_wrapper(in_args) -> List[Dict]:
     """Wrapper for 'map' method of multiprocessing.Pool."""
     logger.info(f'Processing: {meta["path_tif"]}')
     print(meta['path_tif'])
-    # img = tifffile.imread(meta['path_tif'])
     fov = pd.read_csv(meta['path_tif'].replace('.tiff','.tif').replace('.tif','_region_props.csv'))#, index_col=0)
     return img_to_nodes(im_shape, fov, meta=meta)
 
@@ -212,11 +187,6 @@ def dir_to_nodes(
         for _, path in enumerate(paths_img)
     ]
 
-    # import pdb
-    # pdb.set_trace()
-
-    # _img_to_nodes_wrapper(metas[0])
-
     with Pool(min(num_processes, os.cpu_count())) as pool:
         nodes_per_img = pool.map(_img_to_nodes_wrapper, zip(metas, im_shapes))
 
@@ -227,5 +197,5 @@ def dir_to_nodes(
     df = pd.DataFrame(nodes)
     df = pd.concat([df[[not i for i in df.is_pair.values]],
                     df[df.is_pair.values]]).reset_index(drop=True).rename_axis('node_id', axis=0)
-    # df = df.drop(columns=['is_pair'])
+    df = df.drop(columns=['is_pair'])
     return df

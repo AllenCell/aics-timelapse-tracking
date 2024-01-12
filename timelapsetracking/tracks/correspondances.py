@@ -69,10 +69,8 @@ def _calc_edge_groups(edges: List[Tuple],
             constraints_a[idx_a].append(idx_e)
             if w < size_threshold or w > 1/size_threshold:
                 weights_a[idx_a].append((1/w*scale)**weight_scaler)
-                # weights_a[idx_a].append(1/w)
             else:
                 weights_a[idx_a].append(1*scale)
-                # weights_a[idx_a].append(scale)
             
             if weights_a[idx_a][-1] < 0.2:
                 weights_a[idx_a][-1] = 0.2
@@ -84,7 +82,6 @@ def _calc_edge_groups(edges: List[Tuple],
             constraints_b[idx_b].append(idx_e)
             if w < size_threshold or w > 1/size_threshold:
                 weights_b[idx_b].append((w*scale)**weight_scaler)
-                # weights_b[idx_b].append(w)
             else:
                 weights_b[idx_b].append(1)
 
@@ -98,11 +95,7 @@ def _calc_edge_groups(edges: List[Tuple],
             if w < size_threshold or w > 1/size_threshold:
                 weights_b[idx_b[0]].append(w*scale)
                 weights_b[idx_b[1]].append(w*scale)
-                # weights_b[idx_b[0]].append(w)
-                # weights_b[idx_b[1]].append(w)
             else:
-                # weights_b[idx_b[0]].append(1*scale)
-                # weights_b[idx_b[1]].append(1*scale)
                 weights_b[idx_b[0]].append(1)
                 weights_b[idx_b[1]].append(1)
             
@@ -114,8 +107,6 @@ def _calc_edge_groups(edges: List[Tuple],
                 weights_b[idx_b[0]][-1] = 5
             if weights_b[idx_b[1]][-1] > 5:
                 weights_b[idx_b[1]][-1] = 5
-    
-    # import pdb; pdb.set_trace()
 
     return (
         ([c for c in constraints_a.values()]
@@ -174,6 +165,7 @@ def _calc_pos_edges(
         neighbors = tree_a.query_ball_tree(tree_b, thresh_dist)
     assert volumes_a is None or volumes_a.shape[0] == centroids_a.shape[0]
     assert volumes_b is None or volumes_b.shape[0] == centroids_b.shape[0]
+    
     pos_edges = []
     costs = []
     for idx_a, indices_b in enumerate(neighbors):
@@ -184,6 +176,7 @@ def _calc_pos_edges(
                 cost = cost_delete #[idx_a]
             pos_edges.append((idx_a, idx_b))
             costs.append(cost)
+            
         if allow_splits and len(indices_b) > 1:
             # Determine possible splits by two criteria: the angles and the
             # magnitudes of the displacement vectors. Two objects in the second
@@ -191,19 +184,15 @@ def _calc_pos_edges(
             # vector angles are ~-180 apart and if the magnitudes are similar.
             displacements = (tree_b.data[indices_b] - tree_a.data[idx_a]).astype(np.float)
             mags = np.sqrt(np.sum(displacements**2, axis=1)).astype(np.float)
-            # try:
             displacements /= mags[:, np.newaxis]
-            # except:
-            #     print('here')
-            #     print(displacements)
-            #     print(mags)
             maxes = np.maximum(mags[:, np.newaxis], mags[np.newaxis, ])
             diffs = mags[:, np.newaxis] - mags[np.newaxis, ]
-            ndiffs = np.absolute(diffs)/maxes  # error relative to max
+            ndiffs = np.absolute(diffs)/maxes  # error relative to max# len(centroids_a) > 0 and len(centroids_b) > 0
             angles = displacements.dot(displacements.T)
             masks = []
             masks.append(np.tril(ndiffs < 0.7, -1))
             masks.append(np.tril(angles < -0.85, -1))
+            
             if volumes_b is not None:
                 masks.append(_similar_pairs(volumes_b[indices_b], 0.3))
             mask = np.logical_and.reduce(masks)
@@ -220,8 +209,6 @@ def _calc_pos_edges(
                 costs.append(cost_split)
 
     # # Add in "add" edges
-    # import pdb
-    # pdb.set_trace()
     for idx_b in range(len(centroids_b)):
         pos_edges.append((None, idx_b))
         costs.append(cost_add) #[idx_b])
@@ -281,13 +268,9 @@ def find_correspondances(
     size_threshold = 0.9
     if is_bridge:
         thresh_dist = thresh_dist*1.25
-        # size_threshold = size_threshold*.9
 
     cost_add = cost_add or thresh_dist*1.1
     cost_delete = cost_delete or thresh_dist*1.1
-
-    # cost_add = [thresh_dist*1.1 for dist in cost_add]
-    # cost_delete = [thresh_dist*1.1 for dist in cost_delete]
 
     pos_edges, costs = _calc_pos_edges(
         centroids_a=centroids_a,
@@ -305,8 +288,6 @@ def find_correspondances(
     assert len(edge_groups) == (len(centroids_a) + len(centroids_b))
     assert len(edge_weights) == (len(centroids_a) + len(centroids_b))
     A_eq = []
-
-    # import pdb; pdb.set_trace()
     
     for _, (indices, weights) in enumerate(zip(edge_groups, edge_weights)):
         constraint = np.zeros(len(pos_edges), dtype=np.float)
