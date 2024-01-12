@@ -64,6 +64,7 @@ def add_edges(
     index_vals = df[col_index_sequence].unique()
     for idx_s in tqdm(range(index_vals.min()+1, index_vals.max() + 1)):
 
+        # collect noded from previous and current timepoint
         LOGGER.info(f'Processing {col_index_sequence}: {idx_s}')
         print(f'Processing {col_index_sequence}: {idx_s}')
         df_prev = df.query(f'{col_index_sequence} == (@idx_s-1)')
@@ -72,6 +73,7 @@ def add_edges(
         df_prev = df_prev.loc[keep_idxs].copy()
 
         df_curr = df.query(f'{col_index_sequence} == @idx_s')
+        
         
         is_pair = [idx for idx, row in df_curr.iterrows() 
                         if row['is_pair']]
@@ -82,6 +84,7 @@ def add_edges(
 
         has_pair_curr = df_curr['has_pair'].values
 
+        # find matching nodes between timepoints
         if 'volume' in df_curr.columns:
             volumes_prev = df_prev['volume'].values
             volumes_curr = df_curr['volume'].values
@@ -95,7 +98,7 @@ def add_edges(
         )
 
         pair_edges = []
-
+        # add matched nodes to eachother in dataframe
         for edge_from, edge_to in edges:
             if edge_from is None or edge_to is None:
                 continue
@@ -125,7 +128,7 @@ def add_edges(
 
         
 
-        #redo edge mapping and splitting for edge nodes
+        # match and split for edge nodes
         df_curr_has_pair = df.query(f'{col_index_sequence} == @idx_s')
         keep_idxs = [index for index, row in df_curr_has_pair.iterrows() 
                         if row['has_pair']]
@@ -219,17 +222,17 @@ def add_pseudo_pairs(
 
         pair_node = df_edges.loc[pair_idx]
         timepoint = pair_node[col_index_sequence]
-        
         label_1 = pair_node['label_img'][0]
         label_2 = pair_node['label_img'][1]
         
         child_1 = df_edges.query(f'{col_index_sequence} == {timepoint} and label_img == {label_1}')
         child_2 = df_edges.query(f'{col_index_sequence} == {timepoint} and label_img == {label_2}')
         
+        # search for first instance of both cells 
         print(f'Starting in {timepoint}')
         pseudo_child_1, pseudo_child_2 = find_psuedo_pair(child_1, child_2, df_edges, col_index_sequence, start=True)
         
-        
+        # if found, create new pair node in the edge dataframe
         if pseudo_child_1 is not None or pseudo_child_2 is not None:
             print('Found cells for pseudo-pair')
             pseudo_pair = {}
@@ -305,10 +308,7 @@ def add_pseudo_pairs(
             in_2 = eval(in_2.values[0])
             
             if len(in_1)>0:
-                try:
-                    df_edges.loc[in_1, 'out_list'] = '[]'
-                except:
-                    import pdb; pdb.set_trace()
+                df_edges.loc[in_1, 'out_list'] = '[]'
             if len(in_2)>0:
                 df_edges.loc[in_2, 'out_list'] = '[]'
             
@@ -334,7 +334,7 @@ def find_psuedo_pair(child_1, child_2, df_edges, col_index_sequence, start=False
             print('reached to start of sequence')
             return None, None
 
-    
+    # get edges of current cell pair
     in_node_1 = eval(child_1['in_list'].values[0])
     in_node_2 = eval(child_2['in_list'].values[0])
     out_node_1 = eval(child_1['out_list'].values[0])
@@ -342,7 +342,7 @@ def find_psuedo_pair(child_1, child_2, df_edges, col_index_sequence, start=False
     
     time = child_1[col_index_sequence].values[0]
 
-    #no pairs if there is split in linteage prior
+    #no pairs if there is split in lineage prior
     if len(out_node_1) > 1 or len(out_node_2) > 1:
         print(f'found earlier split at timepoint {time}')
         return None, None
@@ -355,7 +355,6 @@ def find_psuedo_pair(child_1, child_2, df_edges, col_index_sequence, start=False
         return child_1, child_2
     # otherwise recursively search further back
     else:
-        # import pdb; pdb.set_trace()
         new_child_1 = df_edges.loc[[in_node_1[0]]]
         new_child_2 = df_edges.loc[[in_node_2[0]]]
         pseudo_child_1, pseudo_child_2 = find_psuedo_pair(new_child_1, new_child_2, df_edges, col_index_sequence)
@@ -397,6 +396,7 @@ def bridge_edges(
     
     for idx_s in tqdm(range(index_vals.min()+1, index_vals.max() + 1)):
 
+        # exclude previos node if it aleady has an edge out
         LOGGER.info(f'Processing {col_index_sequence}: {idx_s}')
         df_prev = df_edges.query(f'{col_index_sequence} == (@idx_s-1)')
         keep_idxs = [idx for idx, row in df_prev.iterrows() 
@@ -405,11 +405,13 @@ def bridge_edges(
                         and not row['is_pair']]
         df_prev = df_prev.loc[keep_idxs].copy()
 
+        # exclude current node if it already has an edge in
         df_curr = df_edges.query(f'{col_index_sequence} >= @idx_s and {col_index_sequence} <= @idx_s + {window}')
         keep_idxs = [idx for idx, row in df_curr.iterrows() 
                         if len(eval(row['in_list'])) == 0
                         and not row['edge_cell']]
         df_curr = df_curr.loc[keep_idxs].copy()
+        
         #redo edge mapping and splitting for edge nodes
         df_curr_has_pair = df_edges.query(f'{col_index_sequence} >= @idx_s and {col_index_sequence} <= @idx_s + {window}')
         df_curr_has_pair = df_curr_has_pair.loc[df_curr_has_pair.has_pair]
@@ -417,8 +419,6 @@ def bridge_edges(
         if len(df_prev.index) == 0 or len(df_curr.index) == 0:
             continue
         
-        has_pair = [idx for idx, row in df_prev.iterrows() 
-                        if row['has_pair']]
         is_pair = [idx for idx, row in df_curr.iterrows() 
                         if row['is_pair']]
 
@@ -429,17 +429,13 @@ def bridge_edges(
         has_pair_curr = df_curr['has_pair'].values
 
         if 'volume' in df_curr.columns:
-            volumes_prev = df_prev['volume'].values#to_numpy()
-            volumes_curr = df_curr['volume'].values#to_numpy()
-        # edge_distances_prev = df_prev['edge_distance'].values
-        # edge_distances_curr = df_curr['edge_distance'].values
+            volumes_prev = df_prev['volume'].values
+            volumes_curr = df_curr['volume'].values
         edges = find_correspondances(
             centroids_a=centroids_prev,
             centroids_b=centroids_curr,
             volumes_a=volumes_prev,
             volumes_b=volumes_curr,
-            # cost_add=edge_distances_curr,
-            # cost_delete=edge_distances_prev,
             has_pair_b=has_pair_curr,
             is_bridge=True,
             **kwargs
