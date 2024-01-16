@@ -80,8 +80,28 @@ visualize_tracks_2d(
 )
 ```
 
+The algorithm can also be run from the command line as follows:
+
+```bash
+# activate conda environment and navigate to repo directory
+activate aics-tracking
+cd [path/to/repo]
+cd aics-timelapse-tracking/timelapsetracking
+
+# run code
+python run_tracking.py \\
+    --input_dir [path to input data folder] \\
+    --output [path to output folder] \\
+    --thresh_dist [distance threshold] \\
+    --size_thresh [size threshold] \\
+    --visualize True #(Optional) include if you want tracking visualization to be created, can be left out otherwise
+
+```
+
 ## Output Data
-Tracking results are outputed to the output directory as a `.csv` file. The file will contain the following data for every segmentation across the timelapse data.
+
+### CSV File
+Tracking results are outputed to the output directory as a `.csv` file. If run using the command-line method this file is named `edges.csv`. The file will contain the following data for every segmentation across the timelapse data.
 
 | Column Name | Data Type | Description |
 | --- | --- | --- |
