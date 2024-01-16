@@ -153,6 +153,7 @@ def add_edges(
                 
                 idxs_curr = child_list
 
+            # overwrite previous match if current match points to same node
             for idx_curr in idxs_curr:
                 divorce_cell = eval(df_edges.loc[idx_curr, 'in_list'])
                 if len(divorce_cell) > 0:
@@ -238,6 +239,7 @@ def add_pseudo_pairs(
             pseudo_pair = {}
             pseudo_pair['volume'] = pseudo_child_1['volume'].values[0] + pseudo_child_2['volume'].values[0]
 
+            # find segmentation of paired cells
             lbl_1 = pseudo_child_1['label_img']
             if isinstance(lbl_1, pd.Series):
                 lbl_1 = lbl_1.values[0]
