@@ -1,6 +1,6 @@
 # Timelapse Tracking
 
-A repositroy for performing tracking of object tracking on timelapses of segmented, nucleus-tagged cell colonies. 
+A repositroy for performing tracking of object tracking on timelapses of segmented, nucleus-tagged cell colonies. This repo is used as part of the Nuclear Morphogenesis [data generating pipeline](https://github.com/aics-int/morphogenesis_workflow_snakemake)
 
 ---
 # Setup
@@ -123,6 +123,9 @@ Tracking results are outputed to the output directory as a `.csv` file. If run u
 | lineage_id | int | unique label for every set of parent-daughter nuclei |
 | track_id | int | unique label for every individually tracked nucleus, not including daughter cells |
 
+### Visualization
+
+If visualization is enabled with either method an additional subdirectory will be formed in the output location. This will save a tiff image for each frame which shows the centroid of each image, its `lineage_id` and `track_id` (in that order), and a trail of the tracked nuclei's recent positions.
 
 # Legal documents
 
