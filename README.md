@@ -1,6 +1,6 @@
 # Timelapse Tracking
 
-A repositroy for performing tracking of object tracking on timelapses of segmented, nucleus-tagged cell colonies. This repo is used as part of the Nuclear Morphogenesis [data generating pipeline](https://github.com/aics-int/morphogenesis_workflow_snakemake)
+A repositroy for performing tracking of object tracking on timelapses of segmented, nucleus-tagged cell colonies. This repo is used as part of the Nuclear Morphogenesis [data generating pipeline](https://github.com/aics-int/morflowgenesis)
 
 ---
 # Setup

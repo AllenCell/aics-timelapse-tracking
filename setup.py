@@ -62,13 +62,13 @@ setup(name=PACKAGE_NAME,
           ]
       },
       install_requires=[
-          'matplotlib==3.2.2',
-          'numpy==1.19.0',
-          'pandas==1.0.5',
-          'scipy==1.5.1',
+          'matplotlib',
+          'numpy',
+          'pandas',
+          'scipy',
           'tifffile',
-          'fire==0.4.0'
-          'aicsimageio==2.9.0',
+          'fire'
+          'aicsimageio<=2.9.0',
       ],
 
       # For test setup. This will allow JUnit XML output for Jenkins
