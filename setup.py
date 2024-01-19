@@ -68,7 +68,7 @@ setup(name=PACKAGE_NAME,
           'scipy',
           'tifffile',
           'fire'
-          'aicsimageio<=2.9.0',
+          'aicsimageio',
       ],
 
       # For test setup. This will allow JUnit XML output for Jenkins
