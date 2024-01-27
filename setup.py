@@ -66,9 +66,10 @@ setup(name=PACKAGE_NAME,
           'numpy',
           'pandas',
           'scipy',
-          'tifffile',
+          'tifffile<2022.4.22',
           'fire',
           'aicsimageio',
+          'tiffile',
       ],
 
       # For test setup. This will allow JUnit XML output for Jenkins
