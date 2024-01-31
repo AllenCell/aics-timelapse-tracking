@@ -161,6 +161,7 @@ def dir_to_nodes(
         path_img_dir: Path,
         im_shape: np.ndarray,
         num_processes: int = 8,
+        sampling: int = 1,
 ) -> pd.DataFrame:
     """Converts directory of label images to graph nodes.
 
@@ -178,14 +179,25 @@ def dir_to_nodes(
 
     """
     paths_img = images_from_dir(path_img_dir)
-    metas = [
-        {'index_sequence': idx_s, 'path_tif': path}
-        for idx_s, path in enumerate(paths_img)
-    ]
-    im_shapes = [
-        im_shape
-        for _, path in enumerate(paths_img)
-    ]
+    timepoint = 0
+    metas = []
+    im_shapes = []
+    for idx, path in enumerate(paths_img):
+        if idx % sampling == 0:
+            metas.append({'index_sequence': timepoint, 'time_index': idx, 'path_tif': path})
+            im_shapes.append(im_shape)
+            timepoint += 1
+
+    
+    
+    # metas = [
+    #     {'index_sequence': idx_s, 'path_tif': path}
+    #     for idx_s, path in enumerate(paths_img)
+    # ]
+    # im_shapes = [
+    #     im_shape
+    #     for idx, path in enumerate(paths_img)
+    # ]
 
     with Pool(min(num_processes, os.cpu_count())) as pool:
         nodes_per_img = pool.map(_img_to_nodes_wrapper, zip(metas, im_shapes))

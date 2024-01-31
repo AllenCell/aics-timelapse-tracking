@@ -13,7 +13,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tifffile
-from aicsimageio.writers import OmeTiffWriter
 
 from timelapsetracking.util import images_from_dir
 
@@ -75,9 +74,8 @@ def save_tif(path_save: str, img: np.ndarray) -> None:
         dims = 'C' + "ZYX"[-(img.ndim-1):]
     else:
         dims = "ZYX"[-img.ndim:]
-    
-    tifffile.imsave(path_save, img, compress=2)
 
+    tifffile.imsave(path_save, img)
 
     LOGGER.info('Saved: %s', path_save)
 
