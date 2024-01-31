@@ -22,14 +22,14 @@ readme = "README.md"
 license = {file = "LICENSE.txt"}
 
 [project.optional-dependencies]
-test_group = [
+test = [
     "pytest",
     "pytest-cov",
 ]
-lint_group = [
+lint = [
     "flake8",
 ]
-interactive_dev_group = [
+interactive_dev = [
     "ipython",
     "ipywidgets",
     "itkwidgets",
