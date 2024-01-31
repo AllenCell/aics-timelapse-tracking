@@ -67,7 +67,7 @@ setup(name=PACKAGE_NAME,
           'pandas',
           'scipy',
           'tifffile',
-          'fire'
+          'fire',
           'aicsimageio',
       ],
 
