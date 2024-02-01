@@ -48,7 +48,7 @@ interactive_dev = [
 ]
 
 [project.scripts]
-my_example = "timelapsetracking.run_tracking:main"
+run_tracking = "timelapsetracking.run_tracking:main"
 
 [build-system]
 requires = ["pdm-backend"]
