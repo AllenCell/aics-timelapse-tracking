@@ -20,6 +20,16 @@ dependencies = [
 requires-python = ">=3.8"
 readme = "README.md"
 license = {file = "LICENSE.txt"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: Other/Proprietary License",
+    "Operating System :: OS Independent",
+    "Natural Language :: English",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+[project.urls]
+Homepage = "https://github.com/aics-int/aics-timelapse-tracking"
 
 [project.optional-dependencies]
 test = [
