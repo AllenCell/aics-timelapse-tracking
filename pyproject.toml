@@ -1,6 +1,6 @@
 [project]
 name = "timelapsetracking"
-version = "0.0.1.dev8"
+version = "0.0.2"
 description = "Tracking code and scripts for the timelapse analysis project"
 authors = [
     {name = "Filip Sluzewski", email = "filip.sluzewski@alleninstitute.org"},

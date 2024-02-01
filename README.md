@@ -143,7 +143,7 @@ pytest
 ```bash
 git checkout main
 git pull
-git tag -a -m "v0.1.0"
+git tag -a -m "v0.1.0" v0.1.0
 ```
 4. Push your tag to trigger the PyPi release.
 ```bash
