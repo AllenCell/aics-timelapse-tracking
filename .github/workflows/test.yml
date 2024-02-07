@@ -4,14 +4,11 @@ on: [push, workflow_dispatch]
 
 jobs:
   build:
+    # Should work on Mac and Windows, but not testing there to keep costs down
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
-        os: [
-          # Should work on Mac and Windows, but not testing there to keep costs down
-          ubuntu-latest,
-        ]
 
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
