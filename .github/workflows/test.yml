@@ -9,9 +9,8 @@ jobs:
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         os: [
+          # Should work on Mac and Windows, but not testing there to keep costs down
           ubuntu-latest,
-          windows-latest,
-          macos-latest,
         ]
 
     steps:
