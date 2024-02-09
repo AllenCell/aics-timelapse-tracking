@@ -78,9 +78,9 @@ def target_effectiveness(
     """
     cumulative_overlap = 0
     cumulative_target_length = 0
-    for idx_target, df_target in df_targets.groupby('track_id'):
+    for _, df_target in df_targets.groupby('track_id'):
         best = 0
-        for idx_track, df_track in df_tracks.groupby('track_id'):
+        for _, df_track in df_tracks.groupby('track_id'):
             n_overlap = _track_overlap(
                 df_a=df_target.set_index('index_sequence'),
                 df_b=df_track.set_index('index_sequence'),

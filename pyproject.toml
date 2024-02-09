@@ -1,0 +1,50 @@
+[project]
+name = "timelapsetracking"
+version = "0.0.1.dev8"
+description = "Tracking code and scripts for the timelapse analysis project"
+authors = [
+    {name = "Filip Sluzewski", email = "filip.sluzewski@alleninstitute.org"},
+    {name = "Chek Ounkomol"},
+    {name = "Jianxu Chen"},
+]
+dependencies = [
+    "aicsimageio",
+    "fire",
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "scipy",
+    "tifffile<2022.4.22",
+    "tqdm>=4.66.1",
+]
+requires-python = ">=3.8"
+readme = "README.md"
+license = {file = "LICENSE.txt"}
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+]
+lint = [
+    "flake8",
+]
+interactive_dev = [
+    "ipython",
+    "ipywidgets",
+    "itkwidgets",
+    "jupyter",
+    "matplotlib",
+]
+
+[project.scripts]
+my_example = "timelapsetracking.bin.my_example:main"
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[tool.pdm.dev-dependencies]
+dev = [
+    "pytest>=7.4.4",
+]
