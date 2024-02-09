@@ -1,6 +1,6 @@
 [project]
 name = "timelapsetracking"
-version = "0.0.1.dev8"
+version = "0.0.2"
 description = "Tracking code and scripts for the timelapse analysis project"
 authors = [
     {name = "Filip Sluzewski", email = "filip.sluzewski@alleninstitute.org"},
@@ -20,6 +20,16 @@ dependencies = [
 requires-python = ">=3.8"
 readme = "README.md"
 license = {file = "LICENSE.txt"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: Other/Proprietary License",
+    "Operating System :: OS Independent",
+    "Natural Language :: English",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+[project.urls]
+Homepage = "https://github.com/aics-int/aics-timelapse-tracking"
 
 [project.optional-dependencies]
 test = [
@@ -38,7 +48,7 @@ interactive_dev = [
 ]
 
 [project.scripts]
-my_example = "timelapsetracking.bin.my_example:main"
+run_tracking = "timelapsetracking.run_tracking:main"
 
 [build-system]
 requires = ["pdm-backend"]
