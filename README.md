@@ -127,6 +127,32 @@ Tracking results are outputed to the output directory as a `.csv` file. If run u
 
 If visualization is enabled with either method an additional subdirectory will be formed in the output location. This will save a tiff image for each frame which shows the centroid of each image, its `lineage_id` and `track_id` (in that order), and a trail of the tracked nuclei's recent positions.
 
+# Development workflows
+## Test
+Create a virtual environment and install dependencies as normal.
+Install test dependencies and run the tests as follows.
+```bash
+pip install .[test]
+pytest
+```
+
+## Publish
+1. Update the version number in `pyproject.toml` as part of a PR.
+2. Merge the PR into main.
+3. Tag the commit (replace v0.1.0 with your version).
+```bash
+git checkout main
+git pull
+git tag -a -m "v0.1.0" v0.1.0
+```
+4. Push your tag to trigger the PyPi release.
+```bash
+git push --follow-tags
+```
+5. [Check here](https://github.com/aics-int/aics-timelapse-tracking/actions) that the Publish action succeeded.
+
+Note: publishing to PyPi is not yet enabled for this package.
+
 # Legal documents
 
 - [License](LICENSE.txt) _(Before you release the project publicly please check with your manager to ensure the license is appropriate and has been run through legal review as necessary.)_
