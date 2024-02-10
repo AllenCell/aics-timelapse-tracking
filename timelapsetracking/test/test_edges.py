@@ -2,8 +2,8 @@
 
 import ast
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import pytest
 
 from timelapsetracking.tracks.edges import add_edges
@@ -16,11 +16,11 @@ def test_add_edges():
     positions = rng.standard_normal((8, 2))
     frames = [0, 1, 2, 4, 5, 6, 8, 9]
     df = (
-        pd.DataFrame(positions, columns=['centroid_y', 'centroid_x'])
-        .rename_axis('node_id', axis=0)
+        pd.DataFrame(positions, columns=["centroid_y", "centroid_x"])
+        .rename_axis("node_id", axis=0)
         .assign(index_sequence=frames)
     )
-    df = add_edges(df).sort_values('index_sequence')
+    df = add_edges(df).sort_values("index_sequence")
     out_exp = [[1], [2], [], [4], [5], [], [7], []]
-    out_got = [ast.literal_eval(i) for i in df['out_list'].tolist()]
+    out_got = [ast.literal_eval(i) for i in df["out_list"].tolist()]
     assert out_exp == out_got

@@ -1,7 +1,6 @@
 from timelapsetracking.version import MODULE_VERSION
 
-
-__all__ = ['MODULE_VERSION']
+__all__ = ["MODULE_VERSION"]
 __version__ = MODULE_VERSION
 
 

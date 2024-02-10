@@ -1,26 +1,27 @@
 """General utility functions."""
 
-
-from typing import Callable, List, Sequence
 import os
 import time
+from typing import Callable, List, Sequence
 
 
 def report_run_time(fn: Callable):
     """Decorator to report function execution time."""
+
     def wrapper(*args, **kwargs):
         tic = time.time()
         retval = fn(*args, **kwargs)
         toc = time.time()
-        name = fn.__module__ + '.' + fn.__qualname__
-        print(f'{name} executed in {toc - tic:.2f} s.')
+        name = fn.__module__ + "." + fn.__qualname__
+        print(f"{name} executed in {toc - tic:.2f} s.")
         return retval
+
     return wrapper
 
 
 def images_from_dir(
-        path_dir: str,
-        extensions: Sequence[str] = ('.tif', '.tiff'),
+    path_dir: str,
+    extensions: Sequence[str] = (".tif", ".tiff"),
 ) -> List[str]:
     """Returns a sorted list of images found in the input directory.
 
@@ -38,9 +39,6 @@ def images_from_dir(
 
     """
     paths_img = sorted(
-        [
-            p.path for p in os.scandir(path_dir)
-            if any(ext in p.path.lower() for ext in extensions)
-        ]
+        [p.path for p in os.scandir(path_dir) if any(ext in p.path.lower() for ext in extensions)]
     )
     return paths_img
