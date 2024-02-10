@@ -57,4 +57,15 @@ build-backend = "pdm.backend"
 [tool.pdm.dev-dependencies]
 dev = [
     "pytest>=7.4.4",
+    "black>=24.1.1",
+    "isort>=5.13.2",
 ]
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 100
