@@ -10,8 +10,6 @@ from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-import tifffile
-from skimage import measure as skmeasure
 
 from timelapsetracking.util import images_from_dir, report_run_time
 

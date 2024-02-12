@@ -1,14 +1,9 @@
 import logging
-import os
-from multiprocessing import Pool
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-
-from timelapsetracking.util import report_run_time
 
 logger = logging.getLogger(__name__)
 

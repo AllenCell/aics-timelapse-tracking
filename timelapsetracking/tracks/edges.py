@@ -1,9 +1,7 @@
 """Functions to find connections between nodes in time-lapse graph."""
 
 import logging
-from math import isnan
 
-import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
