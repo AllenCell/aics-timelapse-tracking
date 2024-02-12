@@ -16,6 +16,7 @@ dependencies = [
     "scipy",
     "tifffile<2022.4.22",
     "tqdm>=4.66.1",
+    "pre-commit>=3.5.0",
 ]
 requires-python = ">=3.8"
 readme = "README.md"
@@ -37,7 +38,11 @@ test = [
     "pytest-cov",
 ]
 lint = [
+    "autoflake",
+    "black",
     "flake8",
+    "isort",
+    "pre-commit",
 ]
 interactive_dev = [
     "ipython",
@@ -57,8 +62,6 @@ build-backend = "pdm.backend"
 [tool.pdm.dev-dependencies]
 dev = [
     "pytest>=7.4.4",
-    "black>=24.1.1",
-    "isort>=5.13.2",
 ]
 
 [tool.black]
