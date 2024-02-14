@@ -1,9 +1,7 @@
 import pandas as pd
 
 
-def calc_track_lengths(
-        df: pd.DataFrame, use_lineage_id: bool = False
-) -> pd.Series:
+def calc_track_lengths(df: pd.DataFrame, use_lineage_id: bool = False) -> pd.Series:
     """Returns track or lineage ids sorted by frame count.
 
     Parameters
@@ -19,15 +17,10 @@ def calc_track_lengths(
         Track or lineage lengths.
 
     """
-    col = 'track_id' if not use_lineage_id else 'lineage_id'
+    col = "track_id" if not use_lineage_id else "lineage_id"
     if col not in df.columns:
-        raise ValueError(f'{col} column expected in df')
-    lengths = (
-        df
-        .groupby(col)['index_sequence']
-        .nunique()
-        .sort_values(ascending=False)
-    )
+        raise ValueError(f"{col} column expected in df")
+    lengths = df.groupby(col)["index_sequence"].nunique().sort_values(ascending=False)
     return lengths
 
 
@@ -45,19 +38,17 @@ def add_delta_pos(df: pd.DataFrame) -> pd.DataFrame:
         DataFrame with added x, y, or z displacements.
 
     """
-    if 'in_list' not in df.columns:
+    if "in_list" not in df.columns:
         raise ValueError('DataFrame should have "in_list" column')
-    cols_pos = ('centroid_x', 'centroid_y', 'centroid_z')
+    cols_pos = ("centroid_x", "centroid_y", "centroid_z")
     if not any(col in df.columns for col in cols_pos):
-        raise ValueError(
-            f'DataFrame should have at least 1 position column {cols_pos}'
-        )
-    mask = df['in_list'].notna()
-    parents = df['in_list'].dropna().astype(int).to_numpy()
+        raise ValueError(f"DataFrame should have at least 1 position column {cols_pos}")
+    mask = df["in_list"].notna()
+    parents = df["in_list"].dropna().astype(int).to_numpy()
     for col in cols_pos:
         if col not in df.columns:
             continue
         children_pos = df.loc[mask, col]
         parents_pos = df.loc[parents, col].values
-        df.loc[mask, 'delta_' + col] = children_pos - parents_pos
+        df.loc[mask, "delta_" + col] = children_pos - parents_pos
     return df

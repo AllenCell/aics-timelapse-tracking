@@ -11,7 +11,7 @@ In terminal, move to the directory which you want to keep a copy of this repo. T
 git clone git@github.com:aics-int/aics-timelapse-tracking.git
 
 # create and activate conda env
-conda create -n aics-tracking python==3.7
+conda create -n aics-tracking python==3.8
 conda activate aics-tracking
 
 #install repo
@@ -128,11 +128,19 @@ Tracking results are outputed to the output directory as a `.csv` file. If run u
 If visualization is enabled with either method an additional subdirectory will be formed in the output location. This will save a tiff image for each frame which shows the centroid of each image, its `lineage_id` and `track_id` (in that order), and a trail of the tracked nuclei's recent positions.
 
 # Development workflows
+## Pre-commit: autoformatting
+Create a virtual environment and install dependencies as normal.
+Set up autoformatting with pre-commit. This will run `isort`, `black`, and `autoflake` locally on every commit.
+```bash
+pip install .[dev]
+pre-commit install
+```
+
 ## Test
 Create a virtual environment and install dependencies as normal.
 Install test dependencies and run the tests as follows.
 ```bash
-pip install .[test]
+pip install .[dev]
 pytest
 ```
 

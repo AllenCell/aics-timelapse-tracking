@@ -6,32 +6,27 @@ import pytest
 
 from timelapsetracking.tracks import correspondances as corr
 
-
 Pairing = Tuple[Optional[int], Optional[int]]
 
 
-def _matchings_equal(
-        matching_a: List[Pairing], matching_b: List[Pairing]
-) -> bool:
+def _matchings_equal(matching_a: List[Pairing], matching_b: List[Pairing]) -> bool:
     if len(matching_a) != len(matching_b):
         return False
-    return all(
-        matching_a[idx] == matching_b[idx] for idx in range(len(matching_a))
-    )
+    return all(matching_a[idx] == matching_b[idx] for idx in range(len(matching_a)))
 
 
-def _get_centroid_sets(
-        rng: Optional[np.random.RandomState]
-) -> Tuple[np.ndarray, np.ndarray]:
+def _get_centroid_sets(rng: Optional[np.random.RandomState]) -> Tuple[np.ndarray, np.ndarray]:
     """Generates two sets of centroids for testing."""
     if rng is None:
         rng = np.random.RandomState(666)
-    centroids_0 = np.array([
-        (16, 16),
-        (16, 32),
-        (32, 64),
-        (42, 42),
-    ])
+    centroids_0 = np.array(
+        [
+            (16, 16),
+            (16, 32),
+            (32, 64),
+            (42, 42),
+        ]
+    )
     centroids_1 = []
     for cen in centroids_0:
         centroid_new = tuple(coord + rng.normal(scale=4) for coord in cen)
@@ -41,10 +36,10 @@ def _get_centroid_sets(
 
 
 def _test_matches(
-        centroids_0: np.ndarray,
-        centroids_1: np.ndarray,
-        first_matching: List[Pairing],
-        rng: np.random.RandomState,
+    centroids_0: np.ndarray,
+    centroids_1: np.ndarray,
+    first_matching: List[Pairing],
+    rng: np.random.RandomState,
 ) -> None:
     """Find matches between two sets of centroids. The matching is done
     multiple times after shuffling the centroids.
@@ -76,21 +71,15 @@ def _test_matches(
             if isinstance(indices_1, int) or indices_1 is None:
                 indices_1 = [indices_1]
             # Use -1 to indicate coordinate of none existant centroid
-            centroid_0 = centroids_0[idx_0] if idx_0 is not None else [-1]*nd
+            centroid_0 = centroids_0[idx_0] if idx_0 is not None else [-1] * nd
             for idx_1 in indices_1:
-                centroid_1 = (
-                    centroids_1[idx_1] if idx_1 is not None else [-1]*nd
-                )
-                matching_as_centroids.append(np.concatenate(
-                    [centroid_0, centroid_1], axis=0
-                ))
-        matching_as_centroids = np.sort(
-            np.array(matching_as_centroids), axis=0
-        )
+                centroid_1 = centroids_1[idx_1] if idx_1 is not None else [-1] * nd
+                matching_as_centroids.append(np.concatenate([centroid_0, centroid_1], axis=0))
+        matching_as_centroids = np.sort(np.array(matching_as_centroids), axis=0)
         if prev is None:
-            assert _matchings_equal(matching, first_matching), (
-                f'exp: {first_matching}, got: {matching}'
-            )
+            assert _matchings_equal(
+                matching, first_matching
+            ), f"exp: {first_matching}, got: {matching}"
         if prev is not None:
             npt.assert_array_almost_equal(prev, matching_as_centroids)
         prev = matching_as_centroids
@@ -101,9 +90,7 @@ def test_simple():
     """Test simple correspondance case with 4 centroids in each frame."""
     rng = np.random.RandomState(666)
     centroids_0, centroids_1 = _get_centroid_sets(rng)
-    _test_matches(
-        centroids_0, centroids_1, [(0, 0), (1, 1), (2, 2), (3, 3)], rng
-    )
+    _test_matches(centroids_0, centroids_1, [(0, 0), (1, 1), (2, 2), (3, 3)], rng)
 
 
 def test__calc_pos_edges():
@@ -125,9 +112,7 @@ def test_delete():
     rng = np.random.RandomState(666)
     centroids_0, centroids_1 = _get_centroid_sets(rng)
     centroids_1 = centroids_1[1:-1, :]  # delete some centroids
-    _test_matches(
-        centroids_0, centroids_1, [(0, None), (1, 0), (2, 1), (3, None)], rng
-    )
+    _test_matches(centroids_0, centroids_1, [(0, None), (1, 0), (2, 1), (3, None)], rng)
 
 
 @pytest.mark.skip(reason="Broken, needs to be fixed")
@@ -174,19 +159,11 @@ def test_mitosis():
     # compatible with mitosis (movement vector of first child rotated 180). For
     # object 3, second child incompabile with mitosis (movement vector of first
     # child rotated by 90).
-    child_mito = (
-        centroids_0[0, :]
-        + (
-            np.array([[-1.1, 0], [0, -1.1]])
-            .dot(centroids_1[0, :] - centroids_0[0, :])
-        )
+    child_mito = centroids_0[0, :] + (
+        np.array([[-1.1, 0], [0, -1.1]]).dot(centroids_1[0, :] - centroids_0[0, :])
     )
-    child_non_mito = (
-        centroids_0[3, :]
-        + (
-            np.array([[0, -1.1], [1.1, 0]])
-            .dot(centroids_1[3, :] - centroids_0[3, :])
-        )
+    child_non_mito = centroids_0[3, :] + (
+        np.array([[0, -1.1], [1.1, 0]]).dot(centroids_1[3, :] - centroids_0[3, :])
     )
     centroids_1 = np.concatenate((centroids_1, [child_mito, child_non_mito]))
     _test_matches(
@@ -203,9 +180,9 @@ def test_mitosis():
         centroids_a=centroids_0,
         centroids_b=centroids_1,
         allow_splits=True,
-        thresh_dist=32.,
-        cost_add=40.,
-        cost_delete=40.,
+        thresh_dist=32.0,
+        cost_add=40.0,
+        cost_delete=40.0,
         volumes_b=volumes_b,
     )
     assert (0, (0, 4)) not in edges
@@ -218,9 +195,9 @@ def test_mitosis():
         centroids_a=centroids_0,
         centroids_b=centroids_1,
         allow_splits=True,
-        thresh_dist=32.,
-        cost_add=40.,
-        cost_delete=40.,
+        thresh_dist=32.0,
+        cost_add=40.0,
+        cost_delete=40.0,
         volumes_b=volumes_b,
     )
     assert (0, (0, 4)) in edges

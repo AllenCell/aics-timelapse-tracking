@@ -1,8 +1,7 @@
-from typing import Dict, List, Union
 import ast
+from typing import Dict, List, Union
 
 import pandas as pd
-
 
 NodeType = Union[int, str]
 NodetoEdgesMap = Dict[NodeType, List[NodeType]]
@@ -32,25 +31,25 @@ def graph_valid(out_lists: NodetoEdgesMap) -> (bool, int):
         being_explored[v] = True
         # Check for too many in or out edges
         valid = (True, -1)
-        
+
         if len(in_lists[v]) > 1 or len(out_lists[v]) > 2:
-            print('in-out error')
+            print("in-out error")
             print(v)
-            print(str(in_lists[v]) + ' -> ' + str(out_lists[v]))
+            print(str(in_lists[v]) + " -> " + str(out_lists[v]))
             valid = (False, v)
             return valid
         for child in out_lists[v]:
             if child not in being_explored:
                 valid = _valid_helper(child)
                 if not valid[0]:
-                    print('child not valid helper')
-                    print(f'in:{in_lists[v]}')
-                    print(f'node:{v}')
-                    print(f'out:{child}')
+                    print("child not valid helper")
+                    print(f"in:{in_lists[v]}")
+                    print(f"node:{v}")
+                    print(f"out:{child}")
                     valid = (False, valid[1])
                     return valid
             elif being_explored[child]:  # Cycle detected
-                print('being explored error')
+                print("being explored error")
                 valid = (False, child)
                 return valid
         being_explored[v] = False
@@ -65,10 +64,10 @@ def graph_valid(out_lists: NodetoEdgesMap) -> (bool, int):
     for v in out_lists:
         if v not in being_explored:
             if not _valid_helper(v):
-                print(f'node {v} failed')
-                print(f'in:{in_lists[v]}')
-                print(f'node:{v}')
-                print(f'out:{out_lists[v]}')
+                print(f"node {v} failed")
+                print(f"in:{in_lists[v]}")
+                print(f"node:{v}")
+                print(f"out:{out_lists[v]}")
                 return (False, v)
     return (True, -1)
 
@@ -87,9 +86,7 @@ class _Explorer:
             self.explore_assign_wcc(neighbor, wcc)
 
 
-def _calc_weakly_connected_components(
-        out_lists: Dict[int, List[int]]
-) -> Dict[int, int]:
+def _calc_weakly_connected_components(out_lists: Dict[int, List[int]]) -> Dict[int, int]:
     """Maps nodes to unique weakly-connected component (WCC) ids. In the
     context of cell tracks, each wcc identifies tracks that originate from the
     same ancestor node.
@@ -117,9 +114,7 @@ def _calc_weakly_connected_components(
     return explorer.wcc_list
 
 
-def _calc_track_ids(
-        out_lists: Dict[int, List[int]]
-) -> Dict[int, int]:
+def _calc_track_ids(out_lists: Dict[int, List[int]]) -> Dict[int, int]:
     """Returns mapping from node to track_id.
 
     Assumes all trees in the graph are single-sourced and acyclic.
@@ -136,7 +131,7 @@ def _calc_track_ids(
         while len(stack) > 0:
             v, val = stack.pop()
             if v in track_ids:
-                raise ValueError('Invalid input graph')
+                raise ValueError("Invalid input graph")
             track_ids[v] = val
             children = out_lists[v]
             if len(children) == 1:
@@ -162,18 +157,18 @@ def add_connectivity_labels(df: pd.DataFrame) -> pd.DataFrame:
         New DataFrame with added 'lineage_id' and 'track_id' columns.
 
     """
-    if 'out_list' not in df.columns:
+    if "out_list" not in df.columns:
         raise ValueError('"out_list" column expected in df')
     out_lists = {
         k: ast.literal_eval(v) if isinstance(v, str) else v
-        for k, v in df['out_list'].to_dict().items()
+        for k, v in df["out_list"].to_dict().items()
     }
     valid = graph_valid(out_lists)
     print(valid)
     print(valid[0])
     if not valid[0]:
         print(df.iloc[valid[1]])
-        raise ValueError('Bad input graph')
+        raise ValueError("Bad input graph")
     lineage_ids = _calc_weakly_connected_components(out_lists)
     track_ids = _calc_track_ids(out_lists)
     return df.assign(

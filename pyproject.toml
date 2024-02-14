@@ -16,6 +16,7 @@ dependencies = [
     "scipy",
     "tifffile<2022.4.22",
     "tqdm>=4.66.1",
+    "pre-commit>=3.5.0",
 ]
 requires-python = ">=3.8"
 readme = "README.md"
@@ -37,7 +38,11 @@ test = [
     "pytest-cov",
 ]
 lint = [
+    "autoflake",
+    "black",
     "flake8",
+    "isort",
+    "pre-commit",
 ]
 interactive_dev = [
     "ipython",
@@ -58,3 +63,12 @@ build-backend = "pdm.backend"
 dev = [
     "pytest>=7.4.4",
 ]
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 100

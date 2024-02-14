@@ -1,18 +1,17 @@
-import argparse
-import numpy as np
-from glob import glob
-import sys
 import logging
+import sys
+import traceback
+from glob import glob
 from pathlib import Path
-import traceback
+
 import fire
-import traceback
+import numpy as np
+from aicsimageio import AICSImage
 
 from . import dir_to_nodes
-from .tracks.edges import add_edges
 from .tracks import add_connectivity_labels
+from .tracks.edges import add_edges
 from .viz_utils import visualize_tracks_2d
-from aicsimageio import AICSImage
 
 ######################################################################
 
@@ -45,7 +44,14 @@ class Tracking(object):
         reader = AICSImage(filenames[0])
         self.img_shape = reader.shape[3:]  # STCZYX, only need ZYX dim
 
-    def run(self, output_dir, edge_thresh_dist: int = 75, size_thresh: float = 0.9, debug: bool = False, visualize=False):
+    def run(
+        self,
+        output_dir,
+        edge_thresh_dist: int = 75,
+        size_thresh: float = 0.9,
+        debug: bool = False,
+        visualize=False,
+    ):
 
         # dir_to_nodes converts a folder of tif files in a dataframe
         # with the objects centroids
@@ -53,7 +59,7 @@ class Tracking(object):
 
         # add_edges implements the correspondance between objects accross time
         np.set_printoptions(threshold=sys.maxsize, precision=2, linewidth=250)
-        df_edges = add_edges(df, thresh_dist=edge_thresh_dist, thresh_size = size_thresh)
+        df_edges = add_edges(df, thresh_dist=edge_thresh_dist, thresh_size=size_thresh)
 
         # TODO: add comment @Filip
         df_edges = add_connectivity_labels(df_edges)
@@ -69,9 +75,7 @@ class Tracking(object):
             )
 
 
-def main(
-    input_dir, output, thresh_dist=75, size_thresh=0.9, visualize=False, debug=True
-):
+def main(input_dir, output, thresh_dist=75, size_thresh=0.9, visualize=False, debug=True):
     try:
         # identify all the files to be processed
         input_dir = input_dir
