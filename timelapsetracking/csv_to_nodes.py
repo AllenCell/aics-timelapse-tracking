@@ -39,7 +39,7 @@ def csv_to_nodes(df: pd.DataFrame, metatable: Dict[str, List[str]], field_shape:
         node["edge_distance"] = edge_distance
 
         if metatable["edge_cell"] is not None:
-            node["edge_cell"] = bool(metatable["edge_cell"])
+            node["edge_cell"] = bool(row[metatable["edge_cell"]])
         else:
             node["edge_cell"] = False
 
