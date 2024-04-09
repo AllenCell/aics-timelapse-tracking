@@ -14,7 +14,7 @@ dependencies = [
     "numpy",
     "pandas",
     "scipy",
-    "tifffile<2022.4.22",
+    "tifffile",
     "tqdm>=4.66.1",
     "pre-commit>=3.5.0",
 ]
