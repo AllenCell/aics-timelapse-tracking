@@ -10,7 +10,7 @@ authors = [
 dependencies = [
     "aicsimageio",
     "fire",
-    "matplotlib<3.9",
+    "matplotlib>=3.9.0",
     "numpy",
     "pandas",
     "scipy",

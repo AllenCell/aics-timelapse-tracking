@@ -37,7 +37,7 @@ def get_color_mapping(identifiers: Sequence[int], cmap_mpl: str = "hsv") -> Dict
         Mapping from identifiers to colors.
 
     """
-    cm = matplotlib.cm.get_cmap(cmap_mpl)
+    cm = matplotlib.colormaps[cmap_mpl]
     id_to_color = {}
     floaties = np.linspace(0.0, 1.0, len(identifiers))
     for idx, item in enumerate(identifiers):
