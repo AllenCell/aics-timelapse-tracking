@@ -1,6 +1,6 @@
 # Timelapse Tracking
 
-A repositroy for performing tracking of object tracking on timelapses of segmented, nucleus-tagged cell colonies. This repo is used as part of the Nuclear Morphogenesis [data generating pipeline](https://github.com/aics-int/morflowgenesis)
+A repositroy for performing tracking of object tracking on timelapses of segmented, nucleus-tagged cell colonies. This repo is used as part of the Nuclear Morphogenesis [data generating pipeline](https://github.com/AllenCell/morflowgenesis)
 
 ---
 # Setup
@@ -8,7 +8,7 @@ In terminal, move to the directory which you want to keep a copy of this repo. T
 
 ```bash
 # clone repository
-git clone git@github.com:aics-int/aics-timelapse-tracking.git
+git clone git@github.com:AllenCell/aics-timelapse-tracking.git
 
 # create and activate conda env
 conda create -n aics-tracking python==3.8
@@ -157,7 +157,7 @@ git tag -a -m "v0.1.0" v0.1.0
 ```bash
 git push --follow-tags
 ```
-5. [Check here](https://github.com/aics-int/aics-timelapse-tracking/actions) that the Publish action succeeded.
+5. [Check here](https://github.com/AllenCell/aics-timelapse-tracking/actions) that the Publish action succeeded.
 
 Note: publishing to PyPi is not yet enabled for this package.
 
