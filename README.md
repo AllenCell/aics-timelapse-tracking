@@ -11,7 +11,7 @@ In terminal, move to the directory which you want to keep a copy of this repo. T
 git clone git@github.com:aics-int/aics-timelapse-tracking.git
 
 # create and activate conda env
-conda create -n aics-tracking python==3.8
+conda create -n aics-tracking python==3.9
 conda activate aics-tracking
 
 #install repo
