@@ -30,7 +30,7 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/aics-int/aics-timelapse-tracking"
+Homepage = "https://github.com/AllenCell/aics-timelapse-tracking"
 
 [project.optional-dependencies]
 test = [
