@@ -1,6 +1,6 @@
 [project]
 name = "timelapsetracking"
-version = "0.0.2"
+version = "1.0.0"
 description = "Tracking code and scripts for the timelapse analysis project"
 authors = [
     {name = "Filip Sluzewski", email = "filip.sluzewski@alleninstitute.org"},
@@ -10,7 +10,7 @@ authors = [
 dependencies = [
     "aicsimageio",
     "fire",
-    "matplotlib",
+    "matplotlib<3.9",
     "numpy",
     "pandas",
     "scipy",
